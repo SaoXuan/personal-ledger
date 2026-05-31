@@ -38,8 +38,8 @@
                 <select class="form-select" id="quickAccountSelect" name="account_id" required></select>
               </div>
               <div class="col-md-6">
-                <label class="form-label">日期</label>
-                <input type="date" class="form-control" name="snapshot_date" value="<%= today %>" required />
+                <label class="form-label">月份</label>
+                <input type="month" class="form-control" name="snapshot_month" value="<%= currentMonth %>" required />
               </div>
               <div class="col-md-6">
                 <label class="form-label">余额（RMB）</label>
@@ -94,21 +94,13 @@
             <div class="card shadow-sm border-0">
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                  <h6 class="mb-0">资产变化（RMB 汇总）</h6>
-                  <div class="d-flex gap-2">
-                    <select class="form-select form-select-sm" id="periodSelect">
-                      <option value="day">按日</option>
-                      <option value="week">按周</option>
-                      <option value="month" selected>按月</option>
-                    </select>
-                    <button class="btn btn-sm btn-outline-primary" id="applyTrendBtn">切换</button>
-                  </div>
+                  <h6 class="mb-0">月度资产变化（RMB 汇总）</h6>
                 </div>
                 <div class="table-responsive">
                   <table class="table table-sm align-middle mb-0">
                     <thead>
                       <tr>
-                        <th>周期</th>
+                        <th>月份</th>
                         <th class="text-end">总资产（RMB）</th>
                       </tr>
                     </thead>

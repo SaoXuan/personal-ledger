@@ -1,6 +1,5 @@
 (function () {
   const state = {
-    period: "month",
     stats: { accounts: 0, snapshots: 0, lastDate: "-" },
     summaryRmb: "0.00",
     accounts: [],
@@ -13,8 +12,6 @@
     refreshBtn: document.getElementById("refreshBtn"),
     quickSnapshotForm: document.getElementById("quickSnapshotForm"),
     quickAccountSelect: document.getElementById("quickAccountSelect"),
-    periodSelect: document.getElementById("periodSelect"),
-    applyTrendBtn: document.getElementById("applyTrendBtn"),
     trendTbody: document.getElementById("trendTbody"),
     accountsTbody: document.getElementById("accountsTbody"),
     snapshotsTbody: document.getElementById("snapshotsTbody"),
@@ -31,6 +28,13 @@
   const accountModalEl = document.getElementById("accountModal");
   const accountModal = new bootstrap.Modal(accountModalEl);
   let pollingTimer = null;
+
+  function getCurrentMonth() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    return `${y}-${m}`;
+  }
 
   function escapeHtml(input) {
     return String(input ?? "")
@@ -149,7 +153,7 @@
       .map(
         (row) => `
       <tr>
-        <td>${escapeHtml(row.snapshotDate)}</td>
+        <td>${escapeHtml(row.snapshotMonth)}</td>
         <td>${escapeHtml(row.accountName)}</td>
         <td class="text-end">${formatNumber(row.balance)}</td>
         <td class="text-end">
@@ -164,8 +168,7 @@
   }
 
   async function loadBootstrap(silent = false) {
-    const params = new URLSearchParams({ period: state.period });
-    const data = await apiGet(`/api/bootstrap?${params.toString()}`);
+    const data = await apiGet("/api/bootstrap");
 
     state.stats = data.stats || state.stats;
     state.summaryRmb = data.summaryRmb || "0.00";
@@ -206,7 +209,7 @@
   }
 
   async function removeSnapshot(id) {
-    if (!confirm("确认删除这条余额记录吗？")) return;
+    if (!confirm("确认删除这条月度记录吗？")) return;
     await apiSend(`/api/snapshots/${id}`, "DELETE");
     showToast("记录已删除");
     await loadBootstrap(true);
@@ -216,12 +219,13 @@
     event.preventDefault();
     const payload = Object.fromEntries(new FormData(dom.quickSnapshotForm).entries());
     await apiSend("/api/snapshots", "POST", payload);
-    showToast("余额保存成功");
+    showToast("月度余额保存成功");
 
     const currentAccount = dom.quickSnapshotForm.elements.account_id.value;
+    const currentMonth = dom.quickSnapshotForm.elements.snapshot_month.value || getCurrentMonth();
     dom.quickSnapshotForm.reset();
     dom.quickSnapshotForm.elements.account_id.value = currentAccount;
-    dom.quickSnapshotForm.elements.snapshot_date.valueAsDate = new Date();
+    dom.quickSnapshotForm.elements.snapshot_month.value = currentMonth;
 
     await loadBootstrap(true);
   }
@@ -237,11 +241,6 @@
 
   function bindEvents() {
     dom.refreshBtn.addEventListener("click", () => {
-      loadBootstrap().catch((error) => showToast(error.message, "error"));
-    });
-
-    dom.applyTrendBtn.addEventListener("click", () => {
-      state.period = dom.periodSelect.value;
       loadBootstrap().catch((error) => showToast(error.message, "error"));
     });
 

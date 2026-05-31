@@ -95,6 +95,100 @@ function initSchema() {
       SELECT RAISE(ABORT, 'currency must be CNY');
     END;
   `);
+
+  // 一次性迁移：将日度记录归并为月度记录（每账户每月仅保留最新一条）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+  `);
+  db.prepare(
+    `
+    INSERT OR IGNORE INTO schema_migrations(key, value)
+    VALUES ('monthly_snapshot_v1', '0')
+  `
+  ).run();
+
+  const migrationState = db
+    .prepare(`SELECT value FROM schema_migrations WHERE key = 'monthly_snapshot_v1'`)
+    .get();
+
+  if (!migrationState || migrationState.value !== "1") {
+    db.exec(`
+      BEGIN;
+
+      CREATE TABLE snapshots_monthly_tmp (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER NOT NULL,
+        snapshot_date TEXT NOT NULL,
+        balance TEXT NOT NULL,
+        source TEXT NOT NULL DEFAULT 'manual',
+        note TEXT,
+        meta_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT,
+        UNIQUE(account_id, snapshot_date),
+        FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
+      );
+
+      WITH ranked AS (
+        SELECT
+          account_id,
+          strftime('%Y-%m', snapshot_date) AS month_key,
+          balance,
+          source,
+          note,
+          meta_json,
+          created_at,
+          updated_at,
+          snapshot_date,
+          id,
+          ROW_NUMBER() OVER (
+            PARTITION BY account_id, strftime('%Y-%m', snapshot_date)
+            ORDER BY snapshot_date DESC, id DESC
+          ) AS rn
+        FROM snapshots
+      )
+      INSERT INTO snapshots_monthly_tmp (
+        account_id,
+        snapshot_date,
+        balance,
+        source,
+        note,
+        meta_json,
+        created_at,
+        updated_at
+      )
+      SELECT
+        account_id,
+        month_key || '-01' AS snapshot_date,
+        balance,
+        source,
+        note,
+        meta_json,
+        COALESCE(created_at, datetime('now')),
+        updated_at
+      FROM ranked
+      WHERE rn = 1;
+
+      DROP TABLE snapshots;
+      ALTER TABLE snapshots_monthly_tmp RENAME TO snapshots;
+
+      CREATE INDEX IF NOT EXISTS idx_snapshots_account_date ON snapshots(account_id, snapshot_date);
+      CREATE INDEX IF NOT EXISTS idx_snapshots_date ON snapshots(snapshot_date);
+
+      COMMIT;
+    `);
+
+    db.prepare(
+      `
+      UPDATE schema_migrations
+         SET value = '1'
+       WHERE key = 'monthly_snapshot_v1'
+    `
+    ).run();
+  }
 }
 
 module.exports = {

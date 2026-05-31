@@ -14,7 +14,6 @@ const {
   getTrendData,
   getRecentSnapshots,
 } = require("../services/ledgerService");
-const { isDateString } = require("../utils");
 
 const router = express.Router();
 
@@ -40,23 +39,23 @@ function normalizeSnapshots(snapshots) {
     id: row.id,
     accountId: row.account_id,
     accountName: row.account_name,
-    snapshotDate: row.snapshot_date,
+    snapshotMonth: row.snapshot_month,
     balance: row.balance,
-    source: row.source || "manual",
+    source: "manual",
   }));
 }
 
-function buildDashboardPayload({ period = "month" } = {}) {
+function buildDashboardPayload() {
   return {
     stats: countStats(),
     summaryRmb: getSummaryRmb(),
-    trend: getTrendData({ period }),
+    trend: getTrendData(),
     accounts: normalizeAccounts(getAccountsWithLatest()),
     recentSnapshots: normalizeSnapshots(listSnapshots({ limit: 100 })),
     quickSnapshots: getRecentSnapshots(16).map((x) => ({
       id: x.id,
       accountName: x.account_name,
-      snapshotDate: x.snapshot_date,
+      snapshotMonth: x.snapshot_month,
       balance: x.balance,
     })),
   };
@@ -65,15 +64,12 @@ function buildDashboardPayload({ period = "month" } = {}) {
 router.get("/", (req, res) => {
   res.render("app", {
     title: "Personal Ledger",
-    today: dayjs().format("YYYY-MM-DD"),
+    currentMonth: dayjs().format("YYYY-MM"),
   });
 });
 
 router.get("/api/bootstrap", (req, res) => {
-  const period = ["day", "week", "month"].includes(req.query.period)
-    ? req.query.period
-    : "month";
-  return ok(res, buildDashboardPayload({ period }));
+  return ok(res, buildDashboardPayload());
 });
 
 router.get("/api/accounts", (req, res) => {
@@ -132,11 +128,8 @@ router.get("/api/snapshots", (req, res) => {
 
 router.post("/api/snapshots", (req, res) => {
   try {
-    if (req.body.snapshot_date && !isDateString(req.body.snapshot_date)) {
-      return fail(res, 400, "日期格式必须是 YYYY-MM-DD");
-    }
     upsertSnapshot(req.body);
-    return ok(res, { message: "余额记录已保存" });
+    return ok(res, { message: "月度余额已保存" });
   } catch (error) {
     return fail(res, 400, error.message);
   }

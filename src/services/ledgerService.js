@@ -1,6 +1,6 @@
 const dayjs = require("dayjs");
 const { db } = require("../db");
-const { decimal, normalizeDate, isDateString } = require("../utils");
+const { decimal } = require("../utils");
 
 function cleanBalanceText(raw) {
   return String(raw ?? "")
@@ -27,6 +27,32 @@ function parseBalanceLenient(raw) {
   return decimal(cleaned);
 }
 
+function normalizeMonthKey(rawMonth) {
+  const month = String(rawMonth || "").trim();
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    throw new Error("月份格式必须是 YYYY-MM");
+  }
+  return month;
+}
+
+function monthToSnapshotDate(month) {
+  return `${month}-01`;
+}
+
+function extractMonthFromInput(input) {
+  if (input.snapshot_month) {
+    return normalizeMonthKey(input.snapshot_month);
+  }
+
+  // 兼容旧前端传来的日期格式
+  const maybeDate = String(input.snapshot_date || "").trim();
+  if (/^\d{4}-(0[1-9]|1[0-2])-\d{2}$/.test(maybeDate)) {
+    return maybeDate.slice(0, 7);
+  }
+
+  throw new Error("请选择月份");
+}
+
 function getAccountsWithLatest() {
   return db
     .prepare(
@@ -50,9 +76,10 @@ function getAccountsWithLatest() {
     .all()
     .map((row) => ({
       ...row,
+      latest_date: row.latest_date ? row.latest_date.slice(0, 7) : "",
       latest_balance:
         row.latest_balance === null || row.latest_balance === undefined
-          ? row.latest_balance
+          ? ""
           : parseBalanceLenient(row.latest_balance).toFixed(2),
     }));
 }
@@ -125,9 +152,8 @@ function listSnapshots({ accountId, limit = 200 } = {}) {
         s.id,
         s.account_id,
         a.name AS account_name,
-        s.snapshot_date,
-        s.balance,
-        s.source
+        substr(s.snapshot_date, 1, 7) AS snapshot_month,
+        s.balance
       FROM snapshots s
       JOIN accounts a ON a.id = s.account_id
       WHERE (@accountId IS NULL OR s.account_id = @accountId)
@@ -147,16 +173,13 @@ function listSnapshots({ accountId, limit = 200 } = {}) {
 
 function upsertSnapshot(input) {
   const accountId = Number(input.account_id);
-  const snapshotDate = String(input.snapshot_date || "").trim();
-  const balanceText = String(input.balance || "").trim();
+  const monthKey = extractMonthFromInput(input);
+  const snapshotDate = monthToSnapshotDate(monthKey);
+  const normalizedBalance = parseBalanceStrict(input.balance).toFixed(2);
 
   if (!Number.isInteger(accountId) || accountId <= 0) {
     throw new Error("请选择有效账户");
   }
-  if (!isDateString(snapshotDate)) {
-    throw new Error("日期格式必须是 YYYY-MM-DD");
-  }
-  const normalizedBalance = parseBalanceStrict(balanceText).toFixed(2);
 
   db.prepare(
     `
@@ -171,7 +194,7 @@ function upsertSnapshot(input) {
   `
   ).run({
     account_id: accountId,
-    snapshot_date: normalizeDate(snapshotDate),
+    snapshot_date: snapshotDate,
     balance: normalizedBalance,
     source: "manual",
     note: null,
@@ -190,7 +213,7 @@ function getLatestBalances() {
       SELECT
         a.id,
         a.name,
-        s.snapshot_date AS date,
+        substr(s.snapshot_date, 1, 7) AS month,
         s.balance
       FROM accounts a
       LEFT JOIN snapshots s
@@ -212,47 +235,36 @@ function getLatestBalances() {
 }
 
 function getSummaryRmb() {
-  const total = getLatestBalances().reduce((sum, row) => sum.plus(parseBalanceLenient(row.balance)), decimal(0));
+  const total = getLatestBalances().reduce(
+    (sum, row) => sum.plus(parseBalanceLenient(row.balance)),
+    decimal(0)
+  );
   return total.toFixed(2);
 }
 
-function getPeriodExpr(period) {
-  if (period === "day") return "s.snapshot_date";
-  if (period === "week") return "strftime('%Y-W%W', s.snapshot_date)";
-  return "strftime('%Y-%m', s.snapshot_date)";
-}
-
-function getTrendData({ period = "month" } = {}) {
-  const sql = `
-    WITH bucketed AS (
+function getTrendData() {
+  const rows = db
+    .prepare(
+      `
       SELECT
-        s.account_id,
-        ${getPeriodExpr(period)} AS bucket,
-        MAX(s.snapshot_date) AS max_date
-      FROM snapshots s
-      GROUP BY s.account_id, bucket
-    ),
-    picked AS (
-      SELECT
-        b.bucket AS bucket,
-        s.balance AS balance
-      FROM bucketed b
-      JOIN snapshots s ON s.account_id = b.account_id AND s.snapshot_date = b.max_date
+        substr(snapshot_date, 1, 7) AS month_key,
+        balance
+      FROM snapshots
+      ORDER BY month_key
+    `
     )
-    SELECT bucket, balance
-    FROM picked
-    ORDER BY bucket
-  `;
+    .all();
 
-  const rows = db.prepare(sql).all();
-  const map = new Map();
-
+  const totalsByMonth = new Map();
   for (const row of rows) {
-    const current = decimal(map.get(row.bucket) || 0);
-    map.set(row.bucket, current.plus(parseBalanceLenient(row.balance)).toFixed(2));
+    const current = decimal(totalsByMonth.get(row.month_key) || 0);
+    totalsByMonth.set(
+      row.month_key,
+      current.plus(parseBalanceLenient(row.balance)).toFixed(2)
+    );
   }
 
-  return Array.from(map.entries()).map(([bucket, total]) => ({
+  return Array.from(totalsByMonth.entries()).map(([bucket, total]) => ({
     bucket,
     total,
   }));
@@ -265,7 +277,7 @@ function getRecentSnapshots(limit = 12) {
       SELECT
         s.id,
         a.name AS account_name,
-        s.snapshot_date,
+        substr(s.snapshot_date, 1, 7) AS snapshot_month,
         s.balance
       FROM snapshots s
       JOIN accounts a ON a.id = s.account_id
@@ -285,8 +297,12 @@ function countStats() {
   const snapshots = db.prepare("SELECT COUNT(*) AS c FROM snapshots").get().c;
   const lastDate =
     db.prepare("SELECT MAX(snapshot_date) AS d FROM snapshots").get().d ||
-    dayjs().format("YYYY-MM-DD");
-  return { accounts, snapshots, lastDate };
+    dayjs().format("YYYY-MM-01");
+  return {
+    accounts,
+    snapshots,
+    lastDate: lastDate.slice(0, 7),
+  };
 }
 
 module.exports = {

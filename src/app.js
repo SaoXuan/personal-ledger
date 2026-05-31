@@ -47,7 +47,7 @@ app.use((error, req, res, next) => {
 
 app.listen(port, () => {
   // eslint-disable-next-line no-console
-  console.log(`✅ Personal Ledger running at http://localhost:${port}`);
+  console.log(`Personal Ledger running at http://localhost:${port}`);
   // eslint-disable-next-line no-console
-  console.log(`📦 SQLite DB: ${dbPath}`);
+  console.log(`SQLite DB: ${dbPath}`);
 });
