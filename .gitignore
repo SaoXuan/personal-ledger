@@ -1,8 +1,6 @@
 node_modules/
 .env
-data/
 target/
-
 *.sqlite
 *.sqlite3
 *.csv
