@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+    rel="stylesheet"
+  />
+</head>
+<body class="bg-body-tertiary">
+  <nav class="navbar navbar-expand-lg bg-primary navbar-dark shadow-sm">
+    <div class="container">
+      <span class="navbar-brand fw-semibold">Personal Ledger · RMB</span>
+      <div class="d-flex align-items-center gap-2 text-white-50">
+        <span id="statusText" class="small">每 15 秒自动刷新</span>
+        <button class="btn btn-sm btn-light" id="refreshBtn">刷新</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-3">
+    <div id="toastContainer" class="mb-3"></div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-xl-5">
+        <div class="card shadow-sm border-0">
+          <div class="card-body">
+            <h5 class="card-title mb-3">快速记账</h5>
+            <form id="quickSnapshotForm" class="row g-2">
+              <div class="col-12">
+                <label class="form-label">账户</label>
+                <select class="form-select" id="quickAccountSelect" name="account_id" required></select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">日期</label>
+                <input type="date" class="form-control" name="snapshot_date" value="<%= today %>" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">余额（RMB）</label>
+                <input type="text" class="form-control" name="balance" placeholder="例如 120000.55" required />
+              </div>
+              <div class="col-12 d-grid">
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-check2-circle me-1"></i>保存
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-xl-7">
+        <div class="row g-3">
+          <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm border-0 h-100">
+              <div class="card-body">
+                <div class="text-secondary small">总资产（RMB）</div>
+                <div id="cardTotalRmb" class="fs-4 fw-bold">0.00</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm border-0 h-100">
+              <div class="card-body">
+                <div class="text-secondary small">账户数量</div>
+                <div id="cardAccountsCount" class="fs-4 fw-bold">0</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm border-0 h-100">
+              <div class="card-body">
+                <div class="text-secondary small">记录条数</div>
+                <div id="cardSnapshotsCount" class="fs-4 fw-bold">0</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm border-0 h-100">
+              <div class="card-body">
+                <div class="text-secondary small">最新日期</div>
+                <div id="cardLastDate" class="fs-6 fw-semibold pt-2">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="card shadow-sm border-0">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0">资产变化（RMB 汇总）</h6>
+                  <div class="d-flex gap-2">
+                    <select class="form-select form-select-sm" id="periodSelect">
+                      <option value="day">按日</option>
+                      <option value="week">按周</option>
+                      <option value="month" selected>按月</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-primary" id="applyTrendBtn">切换</button>
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>周期</th>
+                        <th class="text-end">总资产（RMB）</th>
+                      </tr>
+                    </thead>
+                    <tbody id="trendTbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-xl-6">
+        <div class="card shadow-sm border-0">
+          <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">账户列表（仅名称 + 最新余额）</span>
+            <button class="btn btn-sm btn-primary" id="openAccountModalBtn">
+              <i class="bi bi-plus-circle me-1"></i>新增账户
+            </button>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>账户名称</th>
+                    <th class="text-end">最新余额（RMB）</th>
+                    <th class="text-end">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="accountsTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-xl-6">
+        <div class="card shadow-sm border-0">
+          <div class="card-header bg-white fw-semibold">最近余额记录</div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>日期</th>
+                    <th>账户</th>
+                    <th class="text-end">余额（RMB）</th>
+                    <th class="text-end">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="snapshotsTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="modal fade" id="accountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="accountFormDialog">
+          <div class="modal-header">
+            <h5 class="modal-title" id="accountModalTitle">新增账户</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" name="id" />
+            <label class="form-label">账户名称</label>
+            <input class="form-control" name="name" required placeholder="例如：招商银行 / 币安现货 / 工资卡" />
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+            <button type="submit" class="btn btn-primary">保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
