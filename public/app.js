@@ -27,7 +27,6 @@
 
   const accountModalEl = document.getElementById("accountModal");
   const accountModal = new bootstrap.Modal(accountModalEl);
-  let pollingTimer = null;
 
   function getCurrentMonth() {
     const now = new Date();
@@ -289,19 +288,10 @@
     });
   }
 
-  function startPolling() {
-    if (pollingTimer) clearInterval(pollingTimer);
-    pollingTimer = setInterval(() => {
-      loadBootstrap(true).catch(() => {
-        dom.statusText.textContent = "自动刷新失败，稍后重试";
-      });
-    }, 15000);
-  }
-
   async function start() {
     bindEvents();
     await loadBootstrap(true);
-    startPolling();
+    dom.statusText.textContent = "数据按需刷新";
   }
 
   start().catch((error) => {

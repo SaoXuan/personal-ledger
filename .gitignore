@@ -2,7 +2,7 @@ node_modules/
 .env
 data/
 target/
-*.db
+
 *.sqlite
 *.sqlite3
 *.csv
