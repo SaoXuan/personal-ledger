@@ -98,6 +98,23 @@
     .table { --bs-table-hover-bg: rgba(37, 99, 235, 0.045); }
     .table > :not(caption) > * > * { vertical-align: middle; padding-top: .85rem; padding-bottom: .85rem; }
     .table thead th { font-size: .76rem; color: var(--ledger-muted); text-transform: uppercase; letter-spacing: .045em; font-weight: 800; }
+    .metric-label { color: var(--ledger-muted); font-size: .82rem; font-weight: 700; }
+    .metric-value { line-height: 1.12; letter-spacing: -.02em; }
+    .metric-icon {
+      width: 2.3rem;
+      height: 2.3rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ledger-primary);
+      background: rgba(37,99,235,.10);
+      border-radius: .9rem;
+      flex: 0 0 auto;
+    }
+    .hero-kicker { text-transform: uppercase; letter-spacing: .11em; font-weight: 800; }
+    .hero-meta { display: inline-flex; align-items: center; gap: .35rem; padding: .38rem .72rem; border-radius: 999px; background: rgba(255,255,255,.16); }
+    .panel-card { overflow: hidden; }
+    .table-responsive { scrollbar-color: rgba(100,116,139,.38) transparent; }
     .text-tabular { font-variant-numeric: tabular-nums; }
   </style>
 </head>
@@ -153,44 +170,61 @@
         <div class="row g-3">
           <div class="col-12 col-lg-6">
             <div class="card metric-card hero-card h-100">
-              <div class="card-body position-relative">
-                <div class="small opacity-75">总资产（RMB）</div>
-                <div id="cardTotalRmb" class="display-6 fw-bold">0.00</div>
-                <div class="mt-2 small opacity-75">最新月份：<span id="cardLastDate">-</span></div>
+              <div class="card-body position-relative d-flex flex-column justify-content-between">
+                <div>
+                  <div class="small opacity-75 hero-kicker mb-2">Portfolio Overview</div>
+                  <div id="cardTotalRmb" class="display-5 fw-bold metric-value text-tabular">0.00</div>
+                </div>
+                <div class="mt-3 d-flex flex-wrap gap-2 small opacity-90">
+                  <span class="hero-meta"><i class="bi bi-calendar3"></i>最新月份 <span id="cardLastDate">-</span></span>
+                  <span class="hero-meta"><i class="bi bi-currency-yen"></i>RMB 汇总</span>
+                </div>
               </div>
             </div>
           </div>
           <div class="col-sm-6 col-lg-3">
             <div class="card metric-card h-100">
               <div class="card-body">
-                <div class="text-secondary small">总资产变化</div>
-                <div id="cardTotalChange" class="fs-4 fw-bold">-</div>
-                <div id="cardTotalChangeRange" class="small text-secondary">等待下月数据</div>
+                <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                  <div class="metric-label">总资产变化</div>
+                  <span class="metric-icon"><i class="bi bi-graph-up-arrow"></i></span>
+                </div>
+                <div id="cardTotalChange" class="fs-4 fw-bold metric-value text-tabular">-</div>
+                <div id="cardTotalChangeRange" class="small text-secondary mt-1">等待下月数据</div>
               </div>
             </div>
           </div>
           <div class="col-sm-6 col-lg-3">
             <div class="card metric-card h-100">
               <div class="card-body">
-                <div class="text-secondary small">总收益率</div>
-                <div id="cardTotalReturn" class="fs-4 fw-bold">-</div>
-                <div class="small text-secondary">按相邻两个月余额估算</div>
+                <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                  <div class="metric-label">总收益率</div>
+                  <span class="metric-icon"><i class="bi bi-percent"></i></span>
+                </div>
+                <div id="cardTotalReturn" class="fs-4 fw-bold metric-value">-</div>
+                <div class="small text-secondary mt-1">按相邻两个月余额估算</div>
               </div>
             </div>
           </div>
           <div class="col-sm-6 col-lg-3">
             <div class="card metric-card h-100">
               <div class="card-body">
-                <div class="text-secondary small">账户数量</div>
-                <div id="cardAccountsCount" class="fs-4 fw-bold">0</div>
+                <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                  <div class="metric-label">账户数量</div>
+                  <span class="metric-icon"><i class="bi bi-wallet2"></i></span>
+                </div>
+                <div id="cardAccountsCount" class="fs-4 fw-bold metric-value text-tabular">0</div>
               </div>
             </div>
           </div>
           <div class="col-sm-6 col-lg-3">
             <div class="card metric-card h-100">
               <div class="card-body">
-                <div class="text-secondary small">记录条数</div>
-                <div id="cardSnapshotsCount" class="fs-4 fw-bold">0</div>
+                <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                  <div class="metric-label">记录条数</div>
+                  <span class="metric-icon"><i class="bi bi-journal-check"></i></span>
+                </div>
+                <div id="cardSnapshotsCount" class="fs-4 fw-bold metric-value text-tabular">0</div>
               </div>
             </div>
           </div>
