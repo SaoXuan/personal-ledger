@@ -1,0 +1,43 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name your-domain.com;
+
+    access_log /var/log/nginx/personal-ledger.access.log;
+    error_log /var/log/nginx/personal-ledger.error.log;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+
+# ═══════════════════════════════════════════════════════════
+# 使用方法：
+#
+# 1. 复制此文件到 nginx 配置目录：
+#    cp nginx.conf.example /etc/nginx/sites-available/personal-ledger
+#
+# 2. 替换 your-domain.com 为你的域名
+#
+# 3. 创建软链接启用：
+#    ln -s /etc/nginx/sites-available/personal-ledger /etc/nginx/sites-enabled/
+#
+# 4. 测试并重载 nginx：
+#    nginx -t && systemctl reload nginx
+#
+# ═══════════════════════════════════════════════════════════
+# 如需 Basic Auth 保护（推荐），取消下方注释：
+#
+#    auth_basic "Personal Ledger";
+#    auth_basic_user_file /etc/nginx/.htpasswd;
+#
+# 生成密码文件：
+#    htpasswd -c /etc/nginx/.htpasswd your-username
+# ═══════════════════════════════════════════════════════════
