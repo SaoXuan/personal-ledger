@@ -305,11 +305,22 @@
         const monthlyDirection = row.monthlyDirection || row.direction || "flat";
         const cumulativeDirection = row.cumulativeDirection || "flat";
 
-        /* Balance + monthly change (stacked) */
+        /* Balance + monthly change (stacked) + percentage */
         const monthlyChangeClass = monthlyDirection === "up" ? "text-green" : monthlyDirection === "down" ? "text-red" : "text-muted-3";
         const balanceHtml = hasLatest ? formatNumber(row.latestBalance) : "-";
         const changeHtml = hasMonthly
           ? `<div class="small ${monthlyChangeClass} text-tabular" style="font-size:.72rem;">${formatSignedNumber(row.monthlyChangeAmount)}</div>`
+          : "";
+        const totalRmb = Number(state.summaryRmb) || 0;
+        const pct = hasLatest && totalRmb > 0 ? (Number(row.latestBalance) / totalRmb * 100) : 0;
+        const pctText = hasLatest && totalRmb > 0 ? pct.toFixed(1) + "%" : "";
+        const pctBarHtml = pctText
+          ? `<div style="margin-top:.25rem;display:flex;align-items:center;gap:.35rem;">
+               <div style="flex:1;height:4px;background:var(--pl-border-light);border-radius:2px;overflow:hidden;max-width:60px;">
+                 <div style="width:${Math.min(pct, 100).toFixed(1)}%;height:100%;background:var(--pl-accent);border-radius:2px;"></div>
+               </div>
+               <span class="text-muted-3 text-tabular" style="font-size:.66rem;white-space:nowrap;">${pctText}</span>
+             </div>`
           : "";
 
         /* Return badges (monthly + cumulative stacked) */
@@ -349,6 +360,7 @@
         <td class="text-end">
           <div class="fw-600 text-tabular" style="font-size:.85rem;">${balanceHtml}</div>
           ${changeHtml}
+          ${pctBarHtml}
         </td>
         ${sparklineTd}
         <td class="text-end">
