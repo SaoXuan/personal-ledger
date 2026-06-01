@@ -11,6 +11,7 @@
   };
 
   let chartInstance = null;
+  let amountHidden = localStorage.getItem("pl-hide-amount") === "1";
 
   const dom = {
     statusText: document.getElementById("statusText"),
@@ -37,6 +38,7 @@
     chartModalMeta: document.getElementById("chartModalMeta"),
     chartModalClose: document.getElementById("chartModalClose"),
     chartCanvas: document.getElementById("chartCanvas"),
+    heroEyeToggle: document.getElementById("heroEyeToggle"),
   };
 
   const accountModalEl = document.getElementById("accountModal");
@@ -198,9 +200,25 @@
       `</svg>`;
   }
 
+  /* ═══════════════ Amount Visibility Toggle ═══════════════ */
+  function syncEyeIcon() {
+    if (!dom.heroEyeToggle) return;
+    dom.heroEyeToggle.querySelector("i").className =
+      amountHidden ? "bi bi-eye-slash" : "bi bi-eye";
+  }
+
+  function toggleAmountVisibility() {
+    amountHidden = !amountHidden;
+    localStorage.setItem("pl-hide-amount", amountHidden ? "1" : "0");
+    syncEyeIcon();
+    renderCards();
+  }
+
   /* ═══════════════ Render: Cards ═══════════════ */
   function renderCards() {
-    dom.cardTotalRmb.textContent = formatNumber(state.summaryRmb);
+    const masked = "******";
+    dom.cardTotalRmb.textContent = amountHidden ? masked : formatNumber(state.summaryRmb);
+    syncEyeIcon();
     dom.cardAccountsCount.textContent = String(state.stats.accounts ?? 0);
     dom.cardSnapshotsCount.textContent = String(state.stats.snapshots ?? 0);
     dom.cardLastDate.textContent = state.stats.lastDate || "-";
@@ -208,9 +226,11 @@
     const summary = state.performanceSummary || {};
 
     /* Total change metric card */
-    dom.cardTotalChange.textContent = summary.changeAmount
-      ? formatSignedNumber(summary.changeAmount)
-      : "-";
+    dom.cardTotalChange.textContent = amountHidden
+      ? masked
+      : summary.changeAmount
+        ? formatSignedNumber(summary.changeAmount)
+        : "-";
 
     const changeNum = Number(summary.changeAmount);
     if (Number.isFinite(changeNum) && changeNum !== 0) {
@@ -237,7 +257,9 @@
 
     /* Hero change badge */
     if (dom.heroChangeBadge) {
-      if (summary.changeAmount !== undefined && summary.changeAmount !== null) {
+      if (amountHidden) {
+        dom.heroChangeBadge.innerHTML = "";
+      } else if (summary.changeAmount !== undefined && summary.changeAmount !== null) {
         const n = Number(summary.changeAmount);
         if (Number.isFinite(n) && n !== 0) {
           const dir = n > 0 ? "up" : "down";
@@ -569,6 +591,8 @@
 
   /* ═══════════════ Event Binding ═══════════════ */
   function bindEvents() {
+    dom.heroEyeToggle.addEventListener("click", toggleAmountVisibility);
+
     dom.refreshBtn.addEventListener("click", () => {
       loadBootstrap().catch((error) => showToast(error.message, "error"));
     });
