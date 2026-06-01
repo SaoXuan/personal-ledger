@@ -56,13 +56,28 @@ function initSchema() {
     CREATE TABLE IF NOT EXISTS investment_notes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       content TEXT NOT NULL,
-      note_date TEXT NOT NULL DEFAULT (date('now')),
+      note_month TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT
     );
-
-    CREATE INDEX IF NOT EXISTS idx_notes_date ON investment_notes(note_date DESC);
   `);
+
+  // 迁移：investment_notes 从 note_date 改为 note_month
+  const notesColCheck = db.prepare("PRAGMA table_info(investment_notes)").all();
+  const hasOldDateCol = notesColCheck.some((c) => c.name === "note_date");
+  if (hasOldDateCol) {
+    db.exec(`
+      DROP TABLE IF EXISTS investment_notes;
+      CREATE TABLE investment_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        content TEXT NOT NULL,
+        note_month TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT
+      );
+    `);
+  }
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_notes_month ON investment_notes(note_month DESC);`);
 
   // 统一历史与未来数据口径：全部以 CNY 计量
   db.exec(`

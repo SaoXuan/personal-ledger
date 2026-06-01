@@ -895,9 +895,13 @@
           </div>
           <div class="panel-body">
             <div id="noteFormContainer" style="display:none;">
-              <form id="noteForm" class="note-form-row">
+              <form id="noteForm" class="note-form-row" style="flex-wrap:wrap;">
                 <input type="hidden" name="id" value="" />
-                <div style="flex:1;">
+                <div style="display:flex;gap:.5rem;align-items:center;width:100%;margin-bottom:.4rem;">
+                  <label style="font-size:.72rem;font-weight:500;color:var(--pl-text-3);text-transform:uppercase;letter-spacing:.04em;">月份</label>
+                  <input type="month" class="form-control" name="note_month" value="<%= currentMonth %>" style="width:auto;height:32px;font-size:.78rem;padding:0 .5rem;border-radius:var(--pl-radius-xs);border:1px solid var(--pl-border);" required />
+                </div>
+                <div style="flex:1;min-width:0;">
                   <textarea class="note-form-area" name="content" placeholder="记录你的投资心得、市场观察、策略思考..." required></textarea>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:.35rem;">

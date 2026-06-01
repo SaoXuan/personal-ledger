@@ -481,17 +481,18 @@ function countStats() {
   };
 }
 
-function listNotes({ limit = 50 } = {}) {
+function listNotes({ month, limit = 100 } = {}) {
   return db
     .prepare(
       `
-      SELECT id, content, note_date, created_at, updated_at
+      SELECT id, content, note_month, created_at, updated_at
       FROM investment_notes
-      ORDER BY note_date DESC, id DESC
-      LIMIT ?
+      WHERE (@month IS NULL OR note_month = @month)
+      ORDER BY note_month DESC, id DESC
+      LIMIT @limit
     `
     )
-    .all(limit);
+    .all({ month: month || null, limit });
 }
 
 function createNote(input) {
@@ -499,15 +500,18 @@ function createNote(input) {
   if (!content) {
     throw new Error("笔记内容不能为空");
   }
-  const noteDate = input.note_date || dayjs().format("YYYY-MM-DD");
+  const noteMonth = input.note_month || dayjs().format("YYYY-MM");
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(noteMonth)) {
+    throw new Error("月份格式必须是 YYYY-MM");
+  }
   const result = db
     .prepare(
       `
-      INSERT INTO investment_notes (content, note_date)
-      VALUES (@content, @noteDate)
+      INSERT INTO investment_notes (content, note_month)
+      VALUES (@content, @noteMonth)
     `
     )
-    .run({ content, noteDate });
+    .run({ content, noteMonth });
   return result.lastInsertRowid;
 }
 

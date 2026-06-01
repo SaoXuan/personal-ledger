@@ -646,30 +646,39 @@
       dom.notesList.innerHTML = '<div class="note-empty">还没有投资小记，点击「写一条」开始记录。</div>';
       return;
     }
-    dom.notesList.innerHTML = notes
-      .map((note, idx) => {
-        const date = note.note_date || "";
-        const updatedTag = note.updated_at ? ' · 已编辑' : '';
-        const delay = idx * 20;
-        return `
+
+    let html = "";
+    let lastMonth = "";
+    notes.forEach((note, idx) => {
+      const month = note.note_month || "";
+      if (month !== lastMonth) {
+        lastMonth = month;
+        html += `<div style="padding:.45rem 1rem;background:#fafbfc;border-bottom:1px solid var(--pl-border-light);"><span class="month-pill">${escapeHtml(month)}</span></div>`;
+      }
+      const updatedTag = note.updated_at ? " · 已编辑" : "";
+      const delay = idx * 20;
+      html += `
       <div class="note-item" style="animation-delay:${delay}ms">
         <div class="note-content">${escapeHtml(note.content)}</div>
         <div class="note-meta">
-          <span>${escapeHtml(date)}${updatedTag}</span>
+          <span>${escapeHtml(note.created_at ? note.created_at.slice(0, 16) : "")}${updatedTag}</span>
           <div style="display:flex;gap:.3rem;">
             <button class="btn-action" data-action="edit-note" data-id="${note.id}" title="编辑"><i class="bi bi-pencil-square"></i></button>
             <button class="btn-action btn-action-danger" data-action="delete-note" data-id="${note.id}" title="删除"><i class="bi bi-trash"></i></button>
           </div>
         </div>
       </div>`;
-      })
-      .join("");
+    });
+    dom.notesList.innerHTML = html;
   }
 
-  function showNoteForm(noteId, content) {
+  function showNoteForm(noteId, content, noteMonth) {
     dom.noteFormContainer.style.display = "";
     dom.noteForm.elements.id.value = noteId || "";
     dom.noteForm.elements.content.value = content || "";
+    if (noteMonth) {
+      dom.noteForm.elements.note_month.value = noteMonth;
+    }
     dom.noteForm.elements.content.focus();
   }
 
@@ -677,19 +686,21 @@
     dom.noteFormContainer.style.display = "none";
     dom.noteForm.reset();
     dom.noteForm.elements.id.value = "";
+    dom.noteForm.elements.note_month.value = getCurrentMonth();
   }
 
   async function onNoteSubmit(event) {
     event.preventDefault();
     const id = dom.noteForm.elements.id.value;
     const content = dom.noteForm.elements.content.value.trim();
+    const noteMonth = dom.noteForm.elements.note_month.value;
     if (!content) return;
 
     if (id) {
       await apiSend(`/api/notes/${id}`, "PUT", { content });
       showToast("笔记已更新");
     } else {
-      await apiSend("/api/notes", "POST", { content });
+      await apiSend("/api/notes", "POST", { content, note_month: noteMonth });
       showToast("笔记已保存");
     }
     hideNoteForm();
@@ -921,7 +932,7 @@
 
         if (action === "edit-note") {
           const note = state.notes.find((n) => n.id === id);
-          if (note) showNoteForm(id, note.content);
+          if (note) showNoteForm(id, note.content, note.note_month);
           return;
         }
 
