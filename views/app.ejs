@@ -115,6 +115,26 @@
     .hero-meta { display: inline-flex; align-items: center; gap: .35rem; padding: .38rem .72rem; border-radius: 999px; background: rgba(255,255,255,.16); }
     .panel-card { overflow: hidden; }
     .table-responsive { scrollbar-color: rgba(100,116,139,.38) transparent; }
+    @media (max-width: 575.98px) {
+      .navbar .container { align-items: flex-start !important; gap: .65rem; }
+      .navbar-brand { font-size: 1rem; white-space: normal; line-height: 1.25; }
+      #statusText { display: none; }
+      main.container { padding-left: .85rem; padding-right: .85rem; }
+      .card-body { padding: 1rem; }
+      .hero-card { min-height: 142px; }
+      .hero-card .display-5 { font-size: 2rem; word-break: break-word; }
+      .metric-icon { width: 2rem; height: 2rem; border-radius: .75rem; }
+      .quick-card,
+      .metric-card,
+      .panel-card { border-radius: 1rem; box-shadow: 0 12px 30px rgba(15,23,42,.09); }
+      .card-header { padding: .9rem 1rem; gap: .75rem; }
+      .card-header .btn { white-space: nowrap; }
+      .table > :not(caption) > * > * { padding: .72rem .65rem; }
+      .table thead th { font-size: .7rem; }
+      .sticky-actions { position: static; box-shadow: none; background: transparent; }
+      .account-name-cell { min-width: 150px; }
+      .btn-group-sm > .btn, .btn-sm { --bs-btn-padding-y: .35rem; --bs-btn-padding-x: .55rem; }
+    }
     .text-tabular { font-variant-numeric: tabular-nums; }
   </style>
 </head>
