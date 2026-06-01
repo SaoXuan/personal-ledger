@@ -164,35 +164,50 @@
     const rows = state.accountPerformance.length ? state.accountPerformance : state.accounts;
     if (!rows.length) {
       dom.accountsTbody.innerHTML =
-        '<tr><td colspan="6" class="text-secondary">还没有账户，先新增一个。</td></tr>';
+        '<tr><td colspan="7" class="text-secondary">还没有账户，先新增一个。</td></tr>';
       return;
     }
 
     dom.accountsTbody.innerHTML = rows
       .map((row) => {
-        const hasPrevious = row.previousBalance !== undefined && row.previousBalance !== "";
-        const direction = row.direction || "flat";
-        const returnBadge = hasPrevious
-          ? `<span class="return-badge ${directionClass(direction)}"><i class="bi ${directionIcon(direction)}"></i>${formatReturnRate(row.returnRate)}</span>`
-          : '<span class="text-secondary small">下月生成</span>';
+        const hasLatest = row.latestBalance !== undefined && row.latestBalance !== "";
+        const hasMonthly = row.monthlyReturnRate !== undefined && row.monthlyReturnRate !== "";
+        const hasCumulative = row.cumulativeReturnRate !== undefined && row.cumulativeReturnRate !== "";
+        const monthlyDirection = row.monthlyDirection || row.direction || "flat";
+        const cumulativeDirection = row.cumulativeDirection || "flat";
+        const monthlyBadge = hasMonthly
+          ? `<span class="return-badge ${directionClass(monthlyDirection)}"><i class="bi ${directionIcon(monthlyDirection)}"></i>${formatReturnRate(row.monthlyReturnRate)}</span>`
+          : '<span class="text-secondary small">待上期</span>';
+        const cumulativeBadge = hasCumulative
+          ? `<span class="return-badge ${directionClass(cumulativeDirection)}"><i class="bi ${directionIcon(cumulativeDirection)}"></i>${formatReturnRate(row.cumulativeReturnRate)}</span>`
+          : '<span class="text-secondary small">待数据</span>';
+        const monthlyChangeClass = monthlyDirection === "up" ? "text-success" : monthlyDirection === "down" ? "text-danger" : "text-secondary";
+        const cumulativeChangeClass = cumulativeDirection === "up" ? "text-success" : cumulativeDirection === "down" ? "text-danger" : "text-secondary";
+        const monthlyRange = row.previousDate ? `${row.previousDate} → ${row.latestDate || "-"}` : "需要至少两个月";
+        const cumulativeRange = row.firstDate && row.latestDate ? `${row.firstDate} → ${row.latestDate}` : "-";
 
         return `
       <tr>
-        <td>
+        <td class="account-name-cell">
           <div class="fw-semibold">${escapeHtml(row.name)}</div>
-          <div class="small text-secondary">最新：${escapeHtml(row.latestDate || "-")}</div>
+          <div class="small text-secondary">${escapeHtml(cumulativeRange)} · ${Number(row.snapshotCount || 0)} 条记录</div>
         </td>
-        <td class="text-end fw-semibold">${formatNumber(row.latestBalance)}</td>
-        <td class="text-end text-secondary">${hasPrevious ? formatNumber(row.previousBalance) : "-"}</td>
-        <td class="text-end ${direction === "up" ? "text-success" : direction === "down" ? "text-danger" : "text-secondary"}">
-          ${hasPrevious ? formatSignedNumber(row.changeAmount) : "-"}
+        <td class="text-end fw-semibold text-tabular">${hasLatest ? formatNumber(row.latestBalance) : "-"}</td>
+        <td class="text-end ${monthlyChangeClass} text-tabular">
+          <div class="fw-semibold">${hasMonthly ? formatSignedNumber(row.monthlyChangeAmount) : "-"}</div>
+          <div class="small text-secondary">${escapeHtml(monthlyRange)}</div>
         </td>
-        <td class="text-end">${returnBadge}</td>
+        <td class="text-end">${monthlyBadge}</td>
+        <td class="text-end ${cumulativeChangeClass} text-tabular">
+          <div class="fw-semibold">${hasCumulative ? formatSignedNumber(row.cumulativeChangeAmount) : "-"}</div>
+          <div class="small text-secondary">累计</div>
+        </td>
+        <td class="text-end">${cumulativeBadge}</td>
         <td class="text-end sticky-actions">
           <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-primary" data-action="quick-fill" data-id="${row.id}">记一笔</button>
+            <button class="btn btn-outline-primary" data-action="quick-fill" data-id="${row.id}"><i class="bi bi-pencil-square"></i></button>
             <button class="btn btn-outline-secondary" data-action="edit-account" data-id="${row.id}">编辑</button>
-            <button class="btn btn-outline-danger" data-action="delete-account" data-id="${row.id}">删除</button>
+            <button class="btn btn-outline-danger" data-action="delete-account" data-id="${row.id}"><i class="bi bi-trash"></i></button>
           </div>
         </td>
       </tr>

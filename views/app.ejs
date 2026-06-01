@@ -13,40 +13,63 @@
     rel="stylesheet"
   />
   <style>
+    :root {
+      --ledger-bg: #f6f8fb;
+      --ledger-card: rgba(255, 255, 255, 0.92);
+      --ledger-border: rgba(148, 163, 184, 0.22);
+    }
+    body {
+      background:
+        radial-gradient(circle at 8% 0%, rgba(13, 110, 253, 0.10), transparent 28rem),
+        radial-gradient(circle at 92% 8%, rgba(32, 201, 151, 0.10), transparent 24rem),
+        var(--ledger-bg) !important;
+    }
+    .navbar { backdrop-filter: blur(14px); }
     .hero-card {
-      background: linear-gradient(135deg, #0d6efd 0%, #5b8def 45%, #8ec5ff 100%);
+      background: linear-gradient(135deg, #0b5ed7 0%, #3b82f6 46%, #22c55e 120%);
       color: #fff;
       overflow: hidden;
       position: relative;
+      min-height: 148px;
     }
     .hero-card::after {
       content: "";
       position: absolute;
       inset: auto -60px -100px auto;
-      width: 220px;
-      height: 220px;
+      width: 240px;
+      height: 240px;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.18);
     }
-    .metric-card {
-      border: 0;
-      border-radius: 1rem;
-      box-shadow: 0 0.6rem 1.6rem rgba(15, 23, 42, 0.08);
+    .metric-card,
+    .panel-card {
+      border: 1px solid var(--ledger-border) !important;
+      border-radius: 1.1rem;
+      box-shadow: 0 0.8rem 2rem rgba(15, 23, 42, 0.08);
+      background: var(--ledger-card);
     }
+    .section-title { letter-spacing: .01em; }
     .return-badge {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 0.25rem;
       border-radius: 999px;
       padding: 0.25rem 0.65rem;
       font-weight: 700;
       font-size: 0.85rem;
+      white-space: nowrap;
+      min-width: 5.6rem;
     }
     .return-up { color: #087f5b; background: #d3f9d8; }
     .return-down { color: #c92a2a; background: #ffe3e3; }
     .return-flat { color: #495057; background: #f1f3f5; }
-    .sticky-actions { position: sticky; right: 0; background: #fff; }
+    .account-name-cell { min-width: 170px; }
+    .sticky-actions { position: sticky; right: 0; background: rgba(255,255,255,.96); box-shadow: -0.4rem 0 0.8rem rgba(255,255,255,.85); }
     .table > :not(caption) > * > * { vertical-align: middle; }
+    .table thead th { font-size: .78rem; color: #64748b; text-transform: uppercase; letter-spacing: .02em; }
+    .quick-card { border-radius: 1.1rem; border: 1px solid var(--ledger-border); }
+    .text-tabular { font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body class="bg-body-tertiary">
@@ -65,9 +88,15 @@
 
     <div class="row g-3 mb-3">
       <div class="col-12 col-xl-5">
-        <div class="card shadow-sm border-0">
+        <div class="card quick-card shadow-sm bg-white border-0">
           <div class="card-body">
-            <h5 class="card-title mb-3">快速记账</h5>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <div>
+                <h5 class="card-title mb-1 section-title">快速记账</h5>
+                <div class="text-secondary small">录入每月账户余额，自动计算本月与累计收益率</div>
+              </div>
+              <span class="badge text-bg-primary-subtle text-primary rounded-pill">RMB</span>
+            </div>
             <form id="quickSnapshotForm" class="row g-2">
               <div class="col-12">
                 <label class="form-label">账户</label>
@@ -138,7 +167,7 @@
           </div>
 
           <div class="col-12">
-            <div class="card shadow-sm border-0">
+            <div class="card panel-card">
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                   <h6 class="mb-0">月度资产变化（RMB 汇总）</h6>
@@ -163,7 +192,7 @@
 
     <div class="row g-3">
       <div class="col-12 col-xl-6">
-        <div class="card shadow-sm border-0">
+        <div class="card panel-card">
           <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <span class="fw-semibold">账户收益率概览</span>
             <button class="btn btn-sm btn-primary" id="openAccountModalBtn">
@@ -175,11 +204,12 @@
               <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                   <tr>
-                    <th>账户名称</th>
+                    <th class="account-name-cell">账户名称</th>
                     <th class="text-end">最新余额</th>
-                    <th class="text-end">上期余额</th>
-                    <th class="text-end">资金变化</th>
-                    <th class="text-end">收益率</th>
+                    <th class="text-end">本月变化</th>
+                    <th class="text-end">本月收益率</th>
+                    <th class="text-end">累计变化</th>
+                    <th class="text-end">累计收益率</th>
                     <th class="text-end sticky-actions">操作</th>
                   </tr>
                 </thead>
@@ -191,7 +221,7 @@
       </div>
 
       <div class="col-12 col-xl-6">
-        <div class="card shadow-sm border-0">
+        <div class="card panel-card">
           <div class="card-header bg-white fw-semibold">最近余额记录</div>
           <div class="card-body p-0">
             <div class="table-responsive">

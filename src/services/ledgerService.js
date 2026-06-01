@@ -252,7 +252,10 @@ function getAccountPerformance() {
         curr.snapshot_date AS latest_date,
         curr.balance AS latest_balance,
         prev.snapshot_date AS previous_date,
-        prev.balance AS previous_balance
+        prev.balance AS previous_balance,
+        firsts.snapshot_date AS first_date,
+        firsts.balance AS first_balance,
+        snapshot_counts.snapshot_count AS snapshot_count
       FROM accounts a
       LEFT JOIN snapshots curr
         ON curr.account_id = a.id
@@ -270,33 +273,71 @@ function getAccountPerformance() {
              AND curr.snapshot_date IS NOT NULL
              AND s2.snapshot_date < curr.snapshot_date
         )
+      LEFT JOIN snapshots firsts
+        ON firsts.account_id = a.id
+       AND firsts.snapshot_date = (
+          SELECT MIN(s3.snapshot_date)
+            FROM snapshots s3
+           WHERE s3.account_id = a.id
+        )
+      LEFT JOIN (
+        SELECT account_id, COUNT(*) AS snapshot_count
+          FROM snapshots
+         GROUP BY account_id
+      ) snapshot_counts ON snapshot_counts.account_id = a.id
       ORDER BY a.name
     `
     )
     .all();
 
   return rows.map((row) => {
-    const latest = parseBalanceLenient(row.latest_balance);
+    const hasLatest = row.latest_balance !== null && row.latest_balance !== undefined;
+    const latest = hasLatest ? parseBalanceLenient(row.latest_balance) : null;
     const previous = row.previous_balance === null || row.previous_balance === undefined
       ? null
       : parseBalanceLenient(row.previous_balance);
-    const change = previous ? latest.minus(previous) : null;
-    const returnRate = previous && !previous.isZero()
-      ? change.div(previous).times(100)
+    const first = row.first_balance === null || row.first_balance === undefined
+      ? null
+      : parseBalanceLenient(row.first_balance);
+    const monthlyChange = latest && previous ? latest.minus(previous) : null;
+    const monthlyReturnRate = previous && !previous.isZero()
+      ? monthlyChange.div(previous).times(100)
       : null;
+    const cumulativeChange = latest && first ? latest.minus(first) : null;
+    const cumulativeReturnRate = first && !first.isZero()
+      ? cumulativeChange.div(first).times(100)
+      : null;
+    const monthlyDirection = !monthlyChange || monthlyChange.isZero()
+      ? "flat"
+      : monthlyChange.isPositive()
+        ? "up"
+        : "down";
+    const cumulativeDirection = !cumulativeChange || cumulativeChange.isZero()
+      ? "flat"
+      : cumulativeChange.isPositive()
+        ? "up"
+        : "down";
 
     return {
       id: row.id,
       name: row.name,
       latest_date: row.latest_date ? row.latest_date.slice(0, 7) : "",
-      latest_balance: row.latest_balance === null || row.latest_balance === undefined
-        ? ""
-        : latest.toFixed(2),
+      latest_balance: latest ? latest.toFixed(2) : "",
       previous_date: row.previous_date ? row.previous_date.slice(0, 7) : "",
       previous_balance: previous ? previous.toFixed(2) : "",
-      change_amount: change ? change.toFixed(2) : "",
-      return_rate: returnRate ? returnRate.toFixed(2) : "",
-      direction: !change || change.isZero() ? "flat" : change.isPositive() ? "up" : "down",
+      first_date: row.first_date ? row.first_date.slice(0, 7) : "",
+      first_balance: first ? first.toFixed(2) : "",
+      snapshot_count: row.snapshot_count || 0,
+      monthly_change_amount: monthlyChange ? monthlyChange.toFixed(2) : "",
+      monthly_return_rate: monthlyReturnRate ? monthlyReturnRate.toFixed(2) : "",
+      cumulative_change_amount: cumulativeChange ? cumulativeChange.toFixed(2) : "",
+      cumulative_return_rate: cumulativeReturnRate ? cumulativeReturnRate.toFixed(2) : "",
+      // 兼容旧前端字段
+      change_amount: monthlyChange ? monthlyChange.toFixed(2) : "",
+      return_rate: monthlyReturnRate ? monthlyReturnRate.toFixed(2) : "",
+      direction: monthlyDirection,
+      monthly_direction: monthlyDirection,
+      cumulative_direction: cumulativeDirection,
     };
   });
 }

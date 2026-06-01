@@ -3,6 +3,8 @@ node_modules/
 target/
 *.sqlite
 *.sqlite3
+*.db
+data/*.db
 *.csv
 *.html
 npm-debug.log*
