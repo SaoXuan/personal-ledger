@@ -257,6 +257,8 @@ function getAccountPerformance() {
         prev.balance AS previous_balance,
         firsts.snapshot_date AS first_date,
         firsts.balance AS first_balance,
+        jan.snapshot_date AS jan_date,
+        jan.balance AS jan_balance,
         snapshot_counts.snapshot_count AS snapshot_count
       FROM accounts a
       LEFT JOIN snapshots curr
@@ -282,6 +284,9 @@ function getAccountPerformance() {
             FROM snapshots s3
            WHERE s3.account_id = a.id
         )
+      LEFT JOIN snapshots jan
+        ON jan.account_id = a.id
+       AND jan.snapshot_date = SUBSTR(curr.snapshot_date, 1, 4) || '-01-01'
       LEFT JOIN (
         SELECT account_id, COUNT(*) AS snapshot_count
           FROM snapshots
@@ -301,6 +306,7 @@ function getAccountPerformance() {
     const first = row.first_balance === null || row.first_balance === undefined
       ? null
       : parseBalanceLenient(row.first_balance);
+    const jan = row.jan_balance == null ? null : parseBalanceLenient(row.jan_balance);
     const monthlyChange = latest && previous ? latest.minus(previous) : null;
     const monthlyReturnRate = previous && !previous.isZero()
       ? monthlyChange.div(previous).times(100)
@@ -309,6 +315,8 @@ function getAccountPerformance() {
     const cumulativeReturnRate = first && !first.isZero()
       ? cumulativeChange.div(first).times(100)
       : null;
+    const ytdChange = latest && jan ? latest.minus(jan) : null;
+    const ytdReturnRate = jan && !jan.isZero() ? ytdChange.div(jan).times(100) : null;
     const monthlyDirection = !monthlyChange || monthlyChange.isZero()
       ? "flat"
       : monthlyChange.isPositive()
@@ -317,6 +325,11 @@ function getAccountPerformance() {
     const cumulativeDirection = !cumulativeChange || cumulativeChange.isZero()
       ? "flat"
       : cumulativeChange.isPositive()
+        ? "up"
+        : "down";
+    const ytdDirection = !ytdChange || ytdChange.isZero()
+      ? "flat"
+      : ytdChange.isPositive()
         ? "up"
         : "down";
 
@@ -329,11 +342,16 @@ function getAccountPerformance() {
       previous_balance: previous ? previous.toFixed(2) : "",
       first_date: row.first_date ? row.first_date.slice(0, 7) : "",
       first_balance: first ? first.toFixed(2) : "",
+      jan_date: row.jan_date ? row.jan_date.slice(0, 7) : "",
+      jan_balance: jan ? jan.toFixed(2) : "",
       snapshot_count: row.snapshot_count || 0,
       monthly_change_amount: monthlyChange ? monthlyChange.toFixed(2) : "",
       monthly_return_rate: monthlyReturnRate ? monthlyReturnRate.toFixed(2) : "",
       cumulative_change_amount: cumulativeChange ? cumulativeChange.toFixed(2) : "",
       cumulative_return_rate: cumulativeReturnRate ? cumulativeReturnRate.toFixed(2) : "",
+      ytd_change_amount: ytdChange ? ytdChange.toFixed(2) : "",
+      ytd_return_rate: ytdReturnRate ? ytdReturnRate.toFixed(2) : "",
+      ytd_direction: ytdDirection,
       // 兼容旧前端字段
       change_amount: monthlyChange ? monthlyChange.toFixed(2) : "",
       return_rate: monthlyReturnRate ? monthlyReturnRate.toFixed(2) : "",
@@ -348,21 +366,12 @@ function getPerformanceSummary() {
   const latestBalances = getLatestBalances();
   const latestMonth = db.prepare("SELECT MAX(snapshot_date) AS d FROM snapshots").get().d;
   if (!latestMonth) {
-    return { latestMonth: "", previousMonth: "", changeAmount: "", returnRate: "" };
+    return { latestMonth: "", previousMonth: "", changeAmount: "", returnRate: "", ytdChangeAmount: "", ytdReturnRate: "" };
   }
 
   const previousMonth = db
     .prepare("SELECT MAX(snapshot_date) AS d FROM snapshots WHERE snapshot_date < ?")
     .get(latestMonth).d;
-
-  if (!previousMonth) {
-    return {
-      latestMonth: latestMonth.slice(0, 7),
-      previousMonth: "",
-      changeAmount: "",
-      returnRate: "",
-    };
-  }
 
   const totalForDate = (snapshotDate) =>
     db
@@ -374,6 +383,27 @@ function getPerformanceSummary() {
     (sum, row) => sum.plus(parseBalanceLenient(row.balance)),
     decimal(0)
   );
+
+  // YTD: portfolio level
+  const latestYear = latestMonth.slice(0, 4);
+  const janDate = latestYear + '-01-01';
+  const janTotal = totalForDate(janDate);
+  const ytdChangeAmount = !janTotal.isZero() ? latestTotal.minus(janTotal) : null;
+  const ytdReturnRate = ytdChangeAmount && !janTotal.isZero()
+    ? ytdChangeAmount.div(janTotal).times(100)
+    : null;
+
+  if (!previousMonth) {
+    return {
+      latestMonth: latestMonth.slice(0, 7),
+      previousMonth: "",
+      changeAmount: "",
+      returnRate: "",
+      ytdChangeAmount: ytdChangeAmount ? ytdChangeAmount.toFixed(2) : "",
+      ytdReturnRate: ytdReturnRate ? ytdReturnRate.toFixed(2) : "",
+    };
+  }
+
   const previousTotal = totalForDate(previousMonth);
   const changeAmount = latestTotal.minus(previousTotal);
   const returnRate = previousTotal.isZero() ? null : changeAmount.div(previousTotal).times(100);
@@ -383,6 +413,8 @@ function getPerformanceSummary() {
     previousMonth: previousMonth.slice(0, 7),
     changeAmount: changeAmount.toFixed(2),
     returnRate: returnRate ? returnRate.toFixed(2) : "",
+    ytdChangeAmount: ytdChangeAmount ? ytdChangeAmount.toFixed(2) : "",
+    ytdReturnRate: ytdReturnRate ? ytdReturnRate.toFixed(2) : "",
   };
 }
 

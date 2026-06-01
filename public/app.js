@@ -248,17 +248,27 @@
       dom.cardTotalChange.className = "metric-value text-tabular";
     }
 
-    /* Total return metric card */
+    /* Total return metric card (monthly + YTD) */
     const hasReturn = !!summary.returnRate;
-    dom.cardTotalReturn.textContent = hasReturn
-      ? formatReturnRate(summary.returnRate)
-      : "-";
-
+    const hasYtdReturn = !!summary.ytdReturnRate;
     const returnNum = Number(summary.returnRate);
-    if (Number.isFinite(returnNum) && returnNum !== 0) {
-      dom.cardTotalReturn.className = `metric-value ${returnNum > 0 ? "text-green" : "text-red"}`;
-    } else {
+    const ytdReturnNum = Number(summary.ytdReturnRate);
+
+    if (hasReturn || hasYtdReturn) {
+      const monthlyColor = Number.isFinite(returnNum) && returnNum !== 0
+        ? (returnNum > 0 ? "text-green" : "text-red") : "";
+      const ytdColor = Number.isFinite(ytdReturnNum) && ytdReturnNum !== 0
+        ? (ytdReturnNum > 0 ? "text-green" : "text-red") : "";
+      const monthlyText = hasReturn ? `<span class="${monthlyColor}">月 ${formatReturnRate(summary.returnRate)}</span>` : "";
+      const ytdText = hasYtdReturn ? `<span class="${ytdColor}">年 ${formatReturnRate(summary.ytdReturnRate)}</span>` : "";
+      const separator = monthlyText && ytdText ? "<br>" : "";
+      dom.cardTotalReturn.innerHTML = monthlyText + separator + ytdText;
       dom.cardTotalReturn.className = "metric-value";
+      dom.cardTotalReturn.style.fontSize = ".85rem";
+    } else {
+      dom.cardTotalReturn.textContent = "-";
+      dom.cardTotalReturn.className = "metric-value";
+      dom.cardTotalReturn.style.fontSize = "";
     }
 
     /* Dim metric cards when no data */
@@ -360,9 +370,15 @@
           : "";
 
         /* Return badges (monthly + cumulative stacked) */
+        const hasYtd = row.ytdReturnRate !== undefined && row.ytdReturnRate !== "";
+        const ytdDirection = row.ytdDirection || "flat";
+
         const monthlyBadge = hasMonthly
           ? `<span class="return-badge ${directionClass(monthlyDirection)}"><i class="bi ${directionIcon(monthlyDirection)}"></i>月 ${formatReturnRate(row.monthlyReturnRate)}</span>`
           : '<span class="text-muted-3" style="font-size:.7rem;">待上期</span>';
+        const ytdBadge = hasYtd
+          ? `<span class="return-badge ${directionClass(ytdDirection)}"><i class="bi ${directionIcon(ytdDirection)}"></i>年 ${formatReturnRate(row.ytdReturnRate)}</span>`
+          : "";
         const cumulativeBadge = hasCumulative
           ? `<span class="return-badge ${directionClass(cumulativeDirection)}"><i class="bi ${directionIcon(cumulativeDirection)}"></i>累 ${formatReturnRate(row.cumulativeReturnRate)}</span>`
           : "";
@@ -400,8 +416,11 @@
         </td>
         ${sparklineTd}
         <td class="text-end">
-          <div style="margin-bottom:.2rem;">${monthlyBadge}</div>
-          ${cumulativeBadge ? `<div>${cumulativeBadge}</div>` : ""}
+          <div class="return-stack">
+            <div>${monthlyBadge}</div>
+            ${ytdBadge ? `<div>${ytdBadge}</div>` : ""}
+            ${cumulativeBadge ? `<div>${cumulativeBadge}</div>` : ""}
+          </div>
         </td>
         <td class="text-end">
           <div style="display:flex;gap:.3rem;justify-content:flex-end;">

@@ -444,6 +444,15 @@
     .return-down { color: #dc2626; background: var(--pl-red-bg); border: 1px solid var(--pl-red-border); }
     .return-flat { color: var(--pl-text-3); background: var(--pl-border-light); border: 1px solid var(--pl-border); }
 
+    /* ═══════════════ Return Stack ═══════════════ */
+    .return-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: .2rem;
+    }
+    .return-stack .return-badge { font-size: .66rem; }
+
     /* ═══════════════ Account Chip ═══════════════ */
     .account-chip {
       display: flex;
@@ -760,7 +769,7 @@
               </div>
               <div>
                 <div id="cardTotalReturn" class="metric-value">-</div>
-                <div class="metric-sub">按相邻两个月余额估算</div>
+                <div class="metric-sub">月度 / 年度 YTD</div>
               </div>
             </div>
           </div>

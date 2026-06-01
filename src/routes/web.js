@@ -64,6 +64,9 @@ function normalizePerformance(rows) {
     cumulativeChangeAmount: row.cumulative_change_amount || "",
     cumulativeReturnRate: row.cumulative_return_rate || "",
     cumulativeDirection: row.cumulative_direction || "flat",
+    ytdChangeAmount: row.ytd_change_amount || "",
+    ytdReturnRate: row.ytd_return_rate || "",
+    ytdDirection: row.ytd_direction || "flat",
     // 兼容旧前端字段
     changeAmount: row.change_amount || "",
     returnRate: row.return_rate || "",
