@@ -306,6 +306,12 @@
       width: 100%;
       height: 100%;
     }
+    .hero-sparkline-empty {
+      font-size: .68rem;
+      color: rgba(255,255,255,.25);
+      text-align: center;
+      line-height: 60px;
+    }
 
     /* ═══════════════ Metric Cards ═══════════════ */
     .metric-card {
@@ -323,6 +329,14 @@
     .metric-card:hover {
       transform: translateY(-1px);
       box-shadow: var(--pl-shadow-hover);
+    }
+    .metric-card.metric-empty {
+      border-style: dashed;
+      opacity: .55;
+    }
+    .metric-card.metric-empty:hover {
+      transform: none;
+      box-shadow: var(--pl-shadow);
     }
     .metric-header {
       display: flex;
@@ -609,6 +623,19 @@
     }
     .pl-table tbody tr { animation: fadeInUp .25s ease both; }
 
+    /* ═══════════════ Toggle Link ═══════════════ */
+    .pl-toggle-link {
+      font-size: .72rem;
+      color: var(--pl-accent);
+      cursor: pointer;
+      border: none;
+      background: none;
+      padding: .2rem .5rem;
+      border-radius: var(--pl-radius-xs);
+      transition: background var(--pl-transition);
+    }
+    .pl-toggle-link:hover { background: var(--pl-accent-light); }
+
     /* ═══════════════ Color utilities ═══════════════ */
     .text-green { color: var(--pl-green); }
     .text-red { color: var(--pl-red); }
@@ -769,19 +796,22 @@
         <div class="panel-card">
           <div class="panel-header">
             <span class="panel-title">账户表现</span>
-            <button class="btn-primary-pl" id="openAccountModalBtn">
-              <i class="bi bi-plus"></i>新增
-            </button>
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              <button class="pl-toggle-link" id="toggleZeroAccounts">显示全部</button>
+              <button class="btn-primary-pl" id="openAccountModalBtn">
+                <i class="bi bi-plus"></i>新增
+              </button>
+            </div>
           </div>
           <div class="panel-body">
             <table class="pl-table">
               <thead>
                 <tr>
-                  <th>账户</th>
-                  <th class="text-end">余额 / 变动</th>
-                  <th style="text-align:center;">趋势</th>
-                  <th class="text-end">收益率</th>
-                  <th class="text-end">操作</th>
+                  <th style="width:22%;">账户</th>
+                  <th class="text-end" style="width:22%;">余额 / 变动</th>
+                  <th style="text-align:center;width:14%;">趋势</th>
+                  <th class="text-end" style="width:22%;">收益率</th>
+                  <th class="text-end" style="width:20%;">操作</th>
                 </tr>
               </thead>
               <tbody id="accountsTbody"></tbody>
@@ -798,7 +828,11 @@
           <div class="panel-header">
             <span class="panel-title">余额记录</span>
             <div style="display:flex;align-items:center;gap:.5rem;">
+              <select class="form-select" id="snapshotAccountFilter" style="width:auto;height:32px;font-size:.78rem;padding:0 .5rem 0 .4rem;border-radius:var(--pl-radius-xs);border:1px solid var(--pl-border);">
+                <option value="">全部账户</option>
+              </select>
               <input type="month" class="form-control" id="snapshotMonthFilter" value="<%= currentMonth %>" style="width:auto;height:32px;font-size:.78rem;padding:0 .5rem;border-radius:var(--pl-radius-xs);border:1px solid var(--pl-border);" />
+              <button class="pl-toggle-link" id="exportCsvBtn" title="导出 CSV"><i class="bi bi-download"></i> 导出</button>
             </div>
           </div>
           <div class="panel-body panel-body-scroll">

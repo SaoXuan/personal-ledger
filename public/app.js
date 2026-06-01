@@ -13,6 +13,7 @@
 
   let chartInstance = null;
   let amountHidden = localStorage.getItem("pl-hide-amount") === "1";
+  let showZeroAccounts = false;
 
   const dom = {
     statusText: document.getElementById("statusText"),
@@ -41,6 +42,11 @@
     chartCanvas: document.getElementById("chartCanvas"),
     heroEyeToggle: document.getElementById("heroEyeToggle"),
     snapshotMonthFilter: document.getElementById("snapshotMonthFilter"),
+    snapshotAccountFilter: document.getElementById("snapshotAccountFilter"),
+    toggleZeroAccounts: document.getElementById("toggleZeroAccounts"),
+    exportCsvBtn: document.getElementById("exportCsvBtn"),
+    cardTotalChangeCard: null,
+    cardTotalReturnCard: null,
   };
 
   const accountModalEl = document.getElementById("accountModal");
@@ -168,7 +174,7 @@
   function renderHeroSparkline() {
     if (!dom.heroSparkline) return;
     if (!state.trend || state.trend.length < 2) {
-      dom.heroSparkline.innerHTML = "";
+      dom.heroSparkline.innerHTML = '<div class="hero-sparkline-empty">记录两个月以上后展示趋势</div>';
       return;
     }
 
@@ -228,9 +234,10 @@
     const summary = state.performanceSummary || {};
 
     /* Total change metric card */
+    const hasChange = !!summary.changeAmount;
     dom.cardTotalChange.textContent = amountHidden
       ? masked
-      : summary.changeAmount
+      : hasChange
         ? formatSignedNumber(summary.changeAmount)
         : "-";
 
@@ -242,7 +249,8 @@
     }
 
     /* Total return metric card */
-    dom.cardTotalReturn.textContent = summary.returnRate
+    const hasReturn = !!summary.returnRate;
+    dom.cardTotalReturn.textContent = hasReturn
       ? formatReturnRate(summary.returnRate)
       : "-";
 
@@ -252,6 +260,12 @@
     } else {
       dom.cardTotalReturn.className = "metric-value";
     }
+
+    /* Dim metric cards when no data */
+    const changeCard = dom.cardTotalChange.closest(".metric-card");
+    const returnCard = dom.cardTotalReturn.closest(".metric-card");
+    if (changeCard) changeCard.classList.toggle("metric-empty", !hasChange);
+    if (returnCard) returnCard.classList.toggle("metric-empty", !hasReturn);
 
     dom.cardTotalChangeRange.textContent = summary.previousMonth
       ? `${summary.previousMonth} → ${summary.latestMonth}`
@@ -299,7 +313,27 @@
 
     const sorted = [...rows].sort((a, b) => (Number(b.latestBalance) || 0) - (Number(a.latestBalance) || 0));
 
-    dom.accountsTbody.innerHTML = sorted
+    const hasBalance = (r) => r.latestBalance !== undefined && r.latestBalance !== "" && Number(r.latestBalance) !== 0;
+    const visible = showZeroAccounts ? sorted : sorted.filter(hasBalance);
+    const hiddenCount = sorted.length - sorted.filter(hasBalance).length;
+
+    /* Update toggle button */
+    if (dom.toggleZeroAccounts) {
+      if (hiddenCount === 0) {
+        dom.toggleZeroAccounts.style.display = "none";
+      } else {
+        dom.toggleZeroAccounts.style.display = "";
+        dom.toggleZeroAccounts.textContent = showZeroAccounts ? "隐藏空账户" : `显示全部 (${hiddenCount} 个空账户)`;
+      }
+    }
+
+    if (!visible.length) {
+      dom.accountsTbody.innerHTML =
+        '<tr><td colspan="5" class="text-muted-3" style="padding:1rem;">没有有余额的账户。</td></tr>';
+      return;
+    }
+
+    dom.accountsTbody.innerHTML = visible
       .map((row, idx) => {
         const hasLatest = row.latestBalance !== undefined && row.latestBalance !== "";
         const hasMonthly = row.monthlyReturnRate !== undefined && row.monthlyReturnRate !== "";
@@ -420,18 +454,51 @@
       .join("");
   }
 
+  /* ═══════════════ Snapshot Account Filter ═══════════════ */
+  function renderSnapshotAccountFilter() {
+    if (!dom.snapshotAccountFilter) return;
+    const options = ['<option value="">全部账户</option>'];
+    for (const row of state.accounts) {
+      options.push(`<option value="${row.id}">${escapeHtml(row.name)}</option>`);
+    }
+    dom.snapshotAccountFilter.innerHTML = options.join("");
+  }
+
   /* ═══════════════ Filtered Snapshots Loading ═══════════════ */
   async function loadFilteredSnapshots() {
     const month = dom.snapshotMonthFilter.value;
     if (!month) return;
+    const accountId = dom.snapshotAccountFilter ? dom.snapshotAccountFilter.value : "";
     try {
-      const data = await apiGet(`/api/snapshots?month=${encodeURIComponent(month)}`);
+      let url = `/api/snapshots?month=${encodeURIComponent(month)}`;
+      if (accountId) url += `&accountId=${encodeURIComponent(accountId)}`;
+      const data = await apiGet(url);
       state.filteredSnapshots = data.snapshots || [];
       renderSnapshotsTable();
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error("Failed to load filtered snapshots:", e);
     }
+  }
+
+  /* ═══════════════ CSV Export ═══════════════ */
+  function exportSnapshotsCsv() {
+    const data = state.filteredSnapshots || [];
+    if (!data.length) { showToast("没有可导出的数据", "error"); return; }
+    const header = "日期,账户,余额(RMB)";
+    const rows = data.map(r => `${r.snapshotMonth},${r.accountName},${r.balance}`);
+    const csv = "\uFEFF" + header + "\n" + rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const month = dom.snapshotMonthFilter.value || "all";
+    a.download = `ledger-${month}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("CSV 已导出");
   }
 
   /* ═══════════════ Snapshot Data for Sparklines ═══════════════ */
@@ -562,6 +629,7 @@
 
     renderCards();
     renderAccountSelect();
+    renderSnapshotAccountFilter();
     renderHeroSparkline();
     renderAccountsTable();
     await loadFilteredSnapshots();
@@ -702,10 +770,28 @@
       }
     });
 
-    /* Month filter */
+    /* Toggle zero-balance accounts */
+    if (dom.toggleZeroAccounts) {
+      dom.toggleZeroAccounts.addEventListener("click", () => {
+        showZeroAccounts = !showZeroAccounts;
+        renderAccountsTable();
+      });
+    }
+
+    /* Snapshot filters */
     dom.snapshotMonthFilter.addEventListener("change", () => {
       loadFilteredSnapshots().catch((error) => showToast(error.message, "error"));
     });
+    if (dom.snapshotAccountFilter) {
+      dom.snapshotAccountFilter.addEventListener("change", () => {
+        loadFilteredSnapshots().catch((error) => showToast(error.message, "error"));
+      });
+    }
+
+    /* CSV export */
+    if (dom.exportCsvBtn) {
+      dom.exportCsvBtn.addEventListener("click", exportSnapshotsCsv);
+    }
 
     /* Chart modal close handlers */
     dom.chartModalClose.addEventListener("click", closeChartModal);
