@@ -49,6 +49,12 @@
       .replaceAll("'", "&#039;");
   }
 
+  function getInitials(name) {
+    const text = String(name || "账").trim();
+    if (!text) return "账";
+    return Array.from(text).slice(0, 2).join("");
+  }
+
   function formatNumber(value) {
     if (value === null || value === undefined || value === "") return "-";
     const n = Number(value);
@@ -148,15 +154,21 @@
       return;
     }
 
+    const maxTotal = Math.max(...state.trend.map((row) => Number(row.total) || 0), 1);
     dom.trendTbody.innerHTML = state.trend
-      .map(
-        (row) => `
+      .map((row) => {
+        const total = Number(row.total) || 0;
+        const width = Math.max(8, Math.round((total / maxTotal) * 100));
+        return `
       <tr>
-        <td>${escapeHtml(row.bucket)}</td>
-        <td class="text-end fw-semibold">${formatNumber(row.total)}</td>
+        <td><span class="month-pill">${escapeHtml(row.bucket)}</span></td>
+        <td class="text-end fw-semibold trend-cell text-tabular">
+          ${formatNumber(row.total)}
+          <div class="trend-bar" aria-hidden="true"><span style="width:${width}%"></span></div>
+        </td>
       </tr>
-    `
-      )
+    `;
+      })
       .join("");
   }
 
@@ -189,8 +201,13 @@
         return `
       <tr>
         <td class="account-name-cell">
-          <div class="fw-semibold">${escapeHtml(row.name)}</div>
-          <div class="small text-secondary">${escapeHtml(cumulativeRange)} · ${Number(row.snapshotCount || 0)} 条记录</div>
+          <div class="account-chip">
+            <span class="account-avatar">${escapeHtml(getInitials(row.name))}</span>
+            <div>
+              <div class="fw-semibold">${escapeHtml(row.name)}</div>
+              <div class="small text-secondary">${escapeHtml(cumulativeRange)} · ${Number(row.snapshotCount || 0)} 条记录</div>
+            </div>
+          </div>
         </td>
         <td class="text-end fw-semibold text-tabular">${hasLatest ? formatNumber(row.latestBalance) : "-"}</td>
         <td class="text-end ${monthlyChangeClass} text-tabular">
@@ -228,9 +245,11 @@
       .map(
         (row) => `
       <tr>
-        <td>${escapeHtml(row.snapshotMonth)}</td>
-        <td>${escapeHtml(row.accountName)}</td>
-        <td class="text-end">${formatNumber(row.balance)}</td>
+        <td><span class="month-pill">${escapeHtml(row.snapshotMonth)}</span></td>
+        <td>
+          <span class="account-chip"><span class="account-avatar">${escapeHtml(getInitials(row.accountName))}</span><span>${escapeHtml(row.accountName)}</span></span>
+        </td>
+        <td class="text-end text-tabular fw-semibold">${formatNumber(row.balance)}</td>
         <td class="text-end">
           <button class="btn btn-sm btn-outline-danger" data-action="delete-snapshot" data-id="${row.id}">
             删除
