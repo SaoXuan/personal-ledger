@@ -27,6 +27,7 @@
     cardTotalChange: document.getElementById("cardTotalChange"),
     cardTotalReturn: document.getElementById("cardTotalReturn"),
     cardTotalChangeRange: document.getElementById("cardTotalChangeRange"),
+    heroChangeBadge: document.getElementById("heroChangeBadge"),
     toastContainer: document.getElementById("toastContainer"),
   };
 
@@ -89,9 +90,9 @@
   }
 
   function showToast(message, type = "success") {
-    const className = type === "error" ? "alert-danger" : "alert-success";
+    const className = type === "error" ? "pl-toast-error" : "pl-toast-success";
     const el = document.createElement("div");
-    el.className = `alert ${className} py-2 mb-2`;
+    el.className = `pl-toast ${className}`;
     el.textContent = message;
     dom.toastContainer.appendChild(el);
     setTimeout(() => el.remove(), 2200);
@@ -119,6 +120,7 @@
     return data;
   }
 
+  /* ═══════════════ Render: Cards ═══════════════ */
   function renderCards() {
     dom.cardTotalRmb.textContent = formatNumber(state.summaryRmb);
     dom.cardAccountsCount.textContent = String(state.stats.accounts ?? 0);
@@ -126,20 +128,56 @@
     dom.cardLastDate.textContent = state.stats.lastDate || "-";
 
     const summary = state.performanceSummary || {};
+
+    /* Total change metric card */
     dom.cardTotalChange.textContent = summary.changeAmount
       ? formatSignedNumber(summary.changeAmount)
       : "-";
+
+    const changeNum = Number(summary.changeAmount);
+    if (Number.isFinite(changeNum) && changeNum !== 0) {
+      dom.cardTotalChange.className = `metric-value text-tabular ${changeNum > 0 ? "text-green" : "text-red"}`;
+    } else {
+      dom.cardTotalChange.className = "metric-value text-tabular";
+    }
+
+    /* Total return metric card */
     dom.cardTotalReturn.textContent = summary.returnRate
       ? formatReturnRate(summary.returnRate)
       : "-";
-    dom.cardTotalReturn.className = `fs-4 fw-bold ${
-      Number(summary.returnRate) > 0 ? "text-success" : Number(summary.returnRate) < 0 ? "text-danger" : ""
-    }`;
+
+    const returnNum = Number(summary.returnRate);
+    if (Number.isFinite(returnNum) && returnNum !== 0) {
+      dom.cardTotalReturn.className = `metric-value ${returnNum > 0 ? "text-green" : "text-red"}`;
+    } else {
+      dom.cardTotalReturn.className = "metric-value";
+    }
+
     dom.cardTotalChangeRange.textContent = summary.previousMonth
       ? `${summary.previousMonth} → ${summary.latestMonth}`
       : "等待下月数据";
+
+    /* Hero change badge */
+    if (dom.heroChangeBadge) {
+      if (summary.changeAmount !== undefined && summary.changeAmount !== null) {
+        const n = Number(summary.changeAmount);
+        if (Number.isFinite(n) && n !== 0) {
+          const dir = n > 0 ? "up" : "down";
+          const cls = dir === "up" ? "hero-change-up" : "hero-change-down";
+          const icon = dir === "up" ? "bi-arrow-up-right" : "bi-arrow-down-right";
+          const rateText = summary.returnRate ? ` (${formatReturnRate(summary.returnRate)})` : "";
+          dom.heroChangeBadge.innerHTML =
+            `<span class="hero-change-badge ${cls}"><i class="bi ${icon}"></i>${formatSignedNumber(n)}${escapeHtml(rateText)}</span>`;
+        } else {
+          dom.heroChangeBadge.innerHTML = "";
+        }
+      } else {
+        dom.heroChangeBadge.innerHTML = "";
+      }
+    }
   }
 
+  /* ═══════════════ Render: Account Select ═══════════════ */
   function renderAccountSelect() {
     const options = [`<option value="">请选择账户</option>`];
     for (const row of state.accounts) {
@@ -148,119 +186,146 @@
     dom.quickAccountSelect.innerHTML = options.join("");
   }
 
+  /* ═══════════════ Render: Trend Table ═══════════════ */
   function renderTrendTable() {
     if (!state.trend.length) {
-      dom.trendTbody.innerHTML = `<tr><td colspan="2" class="text-secondary">暂无数据</td></tr>`;
+      dom.trendTbody.innerHTML = `<tr><td colspan="3" class="text-muted-3" style="padding:1rem;">暂无数据</td></tr>`;
       return;
     }
 
     const maxTotal = Math.max(...state.trend.map((row) => Number(row.total) || 0), 1);
+
     dom.trendTbody.innerHTML = state.trend
-      .map((row) => {
+      .map((row, idx) => {
         const total = Number(row.total) || 0;
-        const width = Math.max(8, Math.round((total / maxTotal) * 100));
+        const width = Math.max(6, Math.round((total / maxTotal) * 100));
+
+        /* Month-over-month change */
+        let changeHtml = '<span class="text-muted-3">-</span>';
+        if (idx < state.trend.length - 1) {
+          const prevTotal = Number(state.trend[idx + 1].total) || 0;
+          if (prevTotal > 0) {
+            const diff = total - prevTotal;
+            const dir = diff > 0 ? "up" : diff < 0 ? "down" : "flat";
+            changeHtml = `<span class="return-badge ${directionClass(dir)}"><i class="bi ${directionIcon(dir)}"></i>${formatSignedNumber(diff)}</span>`;
+          }
+        }
+
+        const delay = idx * 30;
         return `
-      <tr>
+      <tr style="animation-delay:${delay}ms">
         <td><span class="month-pill">${escapeHtml(row.bucket)}</span></td>
-        <td class="text-end fw-semibold trend-cell text-tabular">
-          ${formatNumber(row.total)}
-          <div class="trend-bar" aria-hidden="true"><span style="width:${width}%"></span></div>
+        <td class="trend-cell">
+          <span class="fw-600 text-tabular">${formatNumber(row.total)}</span>
+          <div class="trend-bar"><span class="bar-fill" style="width:${width}%"></span></div>
         </td>
-      </tr>
-    `;
+        <td class="text-end">${changeHtml}</td>
+      </tr>`;
       })
       .join("");
   }
 
+  /* ═══════════════ Render: Accounts Table (compact 4-col) ═══════════════ */
   function renderAccountsTable() {
     const rows = state.accountPerformance.length ? state.accountPerformance : state.accounts;
     if (!rows.length) {
       dom.accountsTbody.innerHTML =
-        '<tr><td colspan="7" class="text-secondary">还没有账户，先新增一个。</td></tr>';
+        '<tr><td colspan="4" class="text-muted-3" style="padding:1rem;">还没有账户，先新增一个。</td></tr>';
       return;
     }
 
     dom.accountsTbody.innerHTML = rows
-      .map((row) => {
+      .map((row, idx) => {
         const hasLatest = row.latestBalance !== undefined && row.latestBalance !== "";
         const hasMonthly = row.monthlyReturnRate !== undefined && row.monthlyReturnRate !== "";
         const hasCumulative = row.cumulativeReturnRate !== undefined && row.cumulativeReturnRate !== "";
         const monthlyDirection = row.monthlyDirection || row.direction || "flat";
         const cumulativeDirection = row.cumulativeDirection || "flat";
+
+        /* Balance + monthly change (stacked) */
+        const monthlyChangeClass = monthlyDirection === "up" ? "text-green" : monthlyDirection === "down" ? "text-red" : "text-muted-3";
+        const balanceHtml = hasLatest ? formatNumber(row.latestBalance) : "-";
+        const changeHtml = hasMonthly
+          ? `<div class="small ${monthlyChangeClass} text-tabular" style="font-size:.72rem;">${formatSignedNumber(row.monthlyChangeAmount)}</div>`
+          : "";
+
+        /* Return badges (monthly + cumulative stacked) */
         const monthlyBadge = hasMonthly
-          ? `<span class="return-badge ${directionClass(monthlyDirection)}"><i class="bi ${directionIcon(monthlyDirection)}"></i>${formatReturnRate(row.monthlyReturnRate)}</span>`
-          : '<span class="text-secondary small">待上期</span>';
+          ? `<span class="return-badge ${directionClass(monthlyDirection)}"><i class="bi ${directionIcon(monthlyDirection)}"></i>月 ${formatReturnRate(row.monthlyReturnRate)}</span>`
+          : '<span class="text-muted-3" style="font-size:.7rem;">待上期</span>';
         const cumulativeBadge = hasCumulative
-          ? `<span class="return-badge ${directionClass(cumulativeDirection)}"><i class="bi ${directionIcon(cumulativeDirection)}"></i>${formatReturnRate(row.cumulativeReturnRate)}</span>`
-          : '<span class="text-secondary small">待数据</span>';
-        const monthlyChangeClass = monthlyDirection === "up" ? "text-success" : monthlyDirection === "down" ? "text-danger" : "text-secondary";
-        const cumulativeChangeClass = cumulativeDirection === "up" ? "text-success" : cumulativeDirection === "down" ? "text-danger" : "text-secondary";
-        const monthlyRange = row.previousDate ? `${row.previousDate} → ${row.latestDate || "-"}` : "需要至少两个月";
-        const cumulativeRange = row.firstDate && row.latestDate ? `${row.firstDate} → ${row.latestDate}` : "-";
+          ? `<span class="return-badge ${directionClass(cumulativeDirection)}"><i class="bi ${directionIcon(cumulativeDirection)}"></i>累 ${formatReturnRate(row.cumulativeReturnRate)}</span>`
+          : "";
+
+        const recordInfo = `${Number(row.snapshotCount || 0)} 条`;
+        const delay = idx * 30;
 
         return `
-      <tr>
-        <td class="account-name-cell">
+      <tr style="animation-delay:${delay}ms">
+        <td>
           <div class="account-chip">
             <span class="account-avatar">${escapeHtml(getInitials(row.name))}</span>
             <div>
-              <div class="fw-semibold">${escapeHtml(row.name)}</div>
-              <div class="small text-secondary">${escapeHtml(cumulativeRange)} · ${Number(row.snapshotCount || 0)} 条记录</div>
+              <div class="fw-600" style="font-size:.82rem;">${escapeHtml(row.name)}</div>
+              <div class="text-muted-3" style="font-size:.68rem;">${escapeHtml(recordInfo)}</div>
             </div>
           </div>
         </td>
-        <td class="text-end fw-semibold text-tabular">${hasLatest ? formatNumber(row.latestBalance) : "-"}</td>
-        <td class="text-end ${monthlyChangeClass} text-tabular">
-          <div class="fw-semibold">${hasMonthly ? formatSignedNumber(row.monthlyChangeAmount) : "-"}</div>
-          <div class="small text-secondary">${escapeHtml(monthlyRange)}</div>
+        <td class="text-end">
+          <div class="fw-600 text-tabular" style="font-size:.85rem;">${balanceHtml}</div>
+          ${changeHtml}
         </td>
-        <td class="text-end">${monthlyBadge}</td>
-        <td class="text-end ${cumulativeChangeClass} text-tabular">
-          <div class="fw-semibold">${hasCumulative ? formatSignedNumber(row.cumulativeChangeAmount) : "-"}</div>
-          <div class="small text-secondary">累计</div>
+        <td class="text-end">
+          <div style="margin-bottom:.2rem;">${monthlyBadge}</div>
+          ${cumulativeBadge ? `<div>${cumulativeBadge}</div>` : ""}
         </td>
-        <td class="text-end">${cumulativeBadge}</td>
-        <td class="text-end sticky-actions">
-          <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-primary" data-action="quick-fill" data-id="${row.id}"><i class="bi bi-pencil-square"></i></button>
-            <button class="btn btn-outline-secondary" data-action="edit-account" data-id="${row.id}">编辑</button>
-            <button class="btn btn-outline-danger" data-action="delete-account" data-id="${row.id}"><i class="bi bi-trash"></i></button>
+        <td class="text-end">
+          <div style="display:flex;gap:.3rem;justify-content:flex-end;">
+            <button class="btn-action" data-action="quick-fill" data-id="${row.id}" title="快速记账"><i class="bi bi-pencil-square"></i></button>
+            <button class="btn-action" data-action="edit-account" data-id="${row.id}" title="编辑"><i class="bi bi-gear"></i></button>
+            <button class="btn-action btn-action-danger" data-action="delete-account" data-id="${row.id}" title="删除"><i class="bi bi-trash"></i></button>
           </div>
         </td>
-      </tr>
-    `;
+      </tr>`;
       })
       .join("");
   }
 
+  /* ═══════════════ Render: Snapshots Table ═══════════════ */
   function renderSnapshotsTable() {
     const rows = state.recentSnapshots.slice(0, 80);
     if (!rows.length) {
       dom.snapshotsTbody.innerHTML =
-        '<tr><td colspan="4" class="text-secondary">暂无余额记录。</td></tr>';
+        '<tr><td colspan="4" class="text-muted-3" style="padding:1rem;">暂无余额记录。</td></tr>';
       return;
     }
 
     dom.snapshotsTbody.innerHTML = rows
       .map(
-        (row) => `
-      <tr>
+        (row, idx) => {
+          const delay = idx * 20;
+          return `
+      <tr style="animation-delay:${delay}ms">
         <td><span class="month-pill">${escapeHtml(row.snapshotMonth)}</span></td>
         <td>
-          <span class="account-chip"><span class="account-avatar">${escapeHtml(getInitials(row.accountName))}</span><span>${escapeHtml(row.accountName)}</span></span>
+          <div class="account-chip">
+            <span class="account-avatar">${escapeHtml(getInitials(row.accountName))}</span>
+            <span style="font-size:.82rem;">${escapeHtml(row.accountName)}</span>
+          </div>
         </td>
-        <td class="text-end text-tabular fw-semibold">${formatNumber(row.balance)}</td>
+        <td class="text-end text-tabular fw-600" style="font-size:.85rem;">${formatNumber(row.balance)}</td>
         <td class="text-end">
-          <button class="btn btn-sm btn-outline-danger" data-action="delete-snapshot" data-id="${row.id}">
-            删除
+          <button class="btn-action btn-action-danger" data-action="delete-snapshot" data-id="${row.id}">
+            <i class="bi bi-trash"></i>
           </button>
         </td>
-      </tr>
-    `
+      </tr>`;
+        }
       )
       .join("");
   }
 
+  /* ═══════════════ Data Loading ═══════════════ */
   async function loadBootstrap(silent = false) {
     const data = await apiGet("/api/bootstrap");
 
@@ -283,6 +348,7 @@
     }
   }
 
+  /* ═══════════════ Account CRUD ═══════════════ */
   function resetAccountForm() {
     dom.accountFormDialog.reset();
     dom.accountFormDialog.elements.id.value = "";
@@ -335,6 +401,7 @@
     await loadBootstrap(true);
   }
 
+  /* ═══════════════ Event Binding ═══════════════ */
   function bindEvents() {
     dom.refreshBtn.addEventListener("click", () => {
       loadBootstrap().catch((error) => showToast(error.message, "error"));
@@ -385,6 +452,7 @@
     });
   }
 
+  /* ═══════════════ Start ═══════════════ */
   async function start() {
     bindEvents();
     await loadBootstrap(true);

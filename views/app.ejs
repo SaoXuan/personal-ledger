@@ -13,286 +13,663 @@
     rel="stylesheet"
   />
   <style>
+    /* ═══════════════ Design Tokens ═══════════════ */
     :root {
-      --ledger-bg: #eef4fb;
-      --ledger-surface: rgba(255, 255, 255, 0.88);
-      --ledger-surface-strong: #ffffff;
-      --ledger-border: rgba(100, 116, 139, 0.16);
-      --ledger-text: #0f172a;
-      --ledger-muted: #64748b;
-      --ledger-primary: #2563eb;
-      --ledger-primary-dark: #1d4ed8;
-      --ledger-green: #16a34a;
-      --ledger-red: #dc2626;
-      --ledger-shadow: 0 18px 45px rgba(15, 23, 42, 0.10);
-      --ledger-radius: 1.35rem;
+      --pl-bg: #f7f8fa;
+      --pl-surface: #ffffff;
+      --pl-border: #e5e7eb;
+      --pl-border-light: #f3f4f6;
+      --pl-text: #111827;
+      --pl-text-2: #6b7280;
+      --pl-text-3: #9ca3af;
+      --pl-accent: #6366f1;
+      --pl-accent-hover: #4f46e5;
+      --pl-accent-light: rgba(99,102,241,.08);
+      --pl-green: #10b981;
+      --pl-green-bg: #ecfdf5;
+      --pl-green-border: #d1fae5;
+      --pl-red: #ef4444;
+      --pl-red-bg: #fef2f2;
+      --pl-red-border: #fee2e2;
+      --pl-radius: 12px;
+      --pl-radius-sm: 8px;
+      --pl-radius-xs: 6px;
+      --pl-shadow: 0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.06);
+      --pl-shadow-hover: 0 4px 12px rgba(0,0,0,.08);
+      --pl-transition: 150ms ease;
+      --pl-font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     }
-    * { -webkit-font-smoothing: antialiased; }
+
+    /* ═══════════════ Base ═══════════════ */
+    * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
     body {
-      color: var(--ledger-text);
+      font-family: var(--pl-font) !important;
+      background: var(--pl-bg) !important;
+      color: var(--pl-text);
       min-height: 100vh;
-      background:
-        radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.18), transparent 30rem),
-        radial-gradient(circle at 92% 10%, rgba(22, 163, 74, 0.16), transparent 27rem),
-        linear-gradient(180deg, #f8fbff 0%, var(--ledger-bg) 42%, #f7fafc 100%) !important;
     }
-    .navbar {
-      background: rgba(15, 23, 42, 0.86) !important;
-      border-bottom: 1px solid rgba(255,255,255,.12);
-      backdrop-filter: blur(18px);
+
+    /* ═══════════════ Navbar ═══════════════ */
+    .pl-navbar {
+      background: var(--pl-surface);
+      border-bottom: 1px solid var(--pl-border);
+      padding: 0 1rem;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
-    .navbar-brand { letter-spacing: .01em; }
-    main.container { max-width: 1320px; }
-    .hero-card {
-      background:
-        radial-gradient(circle at 85% 20%, rgba(255,255,255,.24), transparent 13rem),
-        linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #16a34a 118%);
-      color: #fff;
+    .pl-navbar-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .pl-brand {
+      font-weight: 600;
+      font-size: .9rem;
+      color: var(--pl-text);
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .pl-brand-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--pl-accent);
+    }
+    .pl-nav-actions {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+    .pl-nav-status { font-size: .75rem; color: var(--pl-text-3); }
+    .pl-btn-refresh {
+      font-size: .8rem;
+      padding: .35rem .75rem;
+      border-radius: var(--pl-radius-xs);
+      border: 1px solid var(--pl-border);
+      background: var(--pl-surface);
+      color: var(--pl-text-2);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all var(--pl-transition);
+    }
+    .pl-btn-refresh:hover { border-color: var(--pl-accent); color: var(--pl-accent); }
+
+    /* ═══════════════ Layout ═══════════════ */
+    .pl-container { max-width: 1280px; margin: 0 auto; padding: 1.25rem 1rem; }
+
+    /* ═══════════════ Quick Entry ═══════════════ */
+    .quick-card {
+      background: var(--pl-surface);
+      border: 1px solid var(--pl-border);
+      border-radius: var(--pl-radius);
+      box-shadow: var(--pl-shadow);
       overflow: hidden;
+    }
+    .quick-header {
+      padding: .65rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--pl-text-2);
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      transition: color var(--pl-transition);
+    }
+    .quick-header:hover { color: var(--pl-text); }
+    .quick-header .chevron-icon { transition: transform var(--pl-transition); font-size: .7rem; }
+    .quick-header[aria-expanded="false"] .chevron-icon { transform: rotate(-90deg); }
+    .quick-form {
+      padding: .75rem 1rem 1rem;
+      display: flex;
+      gap: .75rem;
+      align-items: flex-end;
+      border-top: 1px solid var(--pl-border-light);
+    }
+    .quick-form .form-group { flex: 1; min-width: 0; }
+    .quick-form .form-group-amount { flex: 1.2; }
+    .quick-form .form-group label {
+      display: block;
+      font-size: .72rem;
+      font-weight: 500;
+      color: var(--pl-text-3);
+      margin-bottom: .3rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      text-align: left;
+    }
+    .quick-form .form-control,
+    .quick-form .form-select {
+      height: 36px;
+      font-size: .82rem;
+      border-radius: var(--pl-radius-xs);
+      border: 1px solid var(--pl-border);
+      padding: 0 .6rem;
+    }
+    .quick-form .form-control:focus,
+    .quick-form .form-select:focus {
+      border-color: var(--pl-accent);
+      box-shadow: 0 0 0 3px var(--pl-accent-light);
+    }
+    .quick-form .input-group { display: flex; }
+    .quick-form .input-group .input-group-text {
+      height: 36px;
+      font-size: .82rem;
+      border-radius: var(--pl-radius-xs) 0 0 var(--pl-radius-xs);
+      border: 1px solid var(--pl-border);
+      border-right: 0;
+      background: var(--pl-border-light);
+      color: var(--pl-text-3);
+      padding: 0 .5rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+    }
+    .quick-form .input-group .form-control {
+      border-radius: 0 var(--pl-radius-xs) var(--pl-radius-xs) 0;
+    }
+    .btn-submit {
+      height: 36px;
+      padding: 0 1.25rem;
+      font-size: .82rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--pl-radius-xs);
+      background: var(--pl-accent);
+      color: #fff;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background var(--pl-transition);
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+    }
+    .btn-submit:hover { background: var(--pl-accent-hover); }
+
+    /* ═══════════════ Hero Card ═══════════════ */
+    .hero-card {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border-radius: var(--pl-radius);
+      color: #fff;
+      padding: 1.75rem;
       position: relative;
-      min-height: 166px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 210px;
+      box-shadow: 0 4px 24px rgba(15,23,42,.18);
+    }
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: rgba(99,102,241,.15);
     }
     .hero-card::after {
       content: "";
       position: absolute;
-      inset: auto -72px -112px auto;
-      width: 260px;
-      height: 260px;
+      bottom: -60px; left: -20px;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: rgba(16,185,129,.1);
+    }
+    .hero-label {
+      font-size: .72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: rgba(255,255,255,.5);
+      margin-bottom: .5rem;
+    }
+    .hero-amount {
+      font-size: 2.5rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -.02em;
+      line-height: 1.1;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-footer {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-top: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      font-size: .75rem;
+      color: rgba(255,255,255,.55);
+      padding: .25rem .6rem;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.16);
+      background: rgba(255,255,255,.08);
     }
-    .metric-card,
-    .panel-card,
-    .quick-card {
-      border: 1px solid var(--ledger-border) !important;
-      border-radius: var(--ledger-radius);
-      box-shadow: var(--ledger-shadow);
-      background: var(--ledger-surface);
-      backdrop-filter: blur(18px);
+    .hero-change-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
+      font-size: .78rem;
+      font-weight: 600;
+      padding: .25rem .65rem;
+      border-radius: 999px;
     }
-    .metric-card { transition: transform .18s ease, box-shadow .18s ease; }
-    .metric-card:hover { transform: translateY(-2px); box-shadow: 0 22px 50px rgba(15,23,42,.13); }
-    .card-header {
-      border-bottom-color: rgba(100,116,139,.14);
-      border-radius: var(--ledger-radius) var(--ledger-radius) 0 0 !important;
+    .hero-change-up { background: rgba(16,185,129,.2); color: #6ee7b7; }
+    .hero-change-down { background: rgba(239,68,68,.2); color: #fca5a5; }
+    .hero-change-flat { background: rgba(255,255,255,.1); color: rgba(255,255,255,.6); }
+
+    /* ═══════════════ Metric Cards ═══════════════ */
+    .metric-card {
+      background: var(--pl-surface);
+      border: 1px solid var(--pl-border);
+      border-radius: var(--pl-radius);
+      padding: 1.15rem;
+      box-shadow: var(--pl-shadow);
+      transition: transform var(--pl-transition), box-shadow var(--pl-transition);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
-    .section-title { letter-spacing: .01em; color: var(--ledger-text); }
+    .metric-card:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--pl-shadow-hover);
+    }
+    .metric-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .65rem;
+    }
+    .metric-label {
+      font-size: .72rem;
+      font-weight: 500;
+      color: var(--pl-text-3);
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+    .metric-icon {
+      width: 30px; height: 30px;
+      border-radius: var(--pl-radius-xs);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .85rem;
+      background: var(--pl-accent-light);
+      color: var(--pl-accent);
+    }
+    .metric-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -.02em;
+      line-height: 1.2;
+    }
+    .metric-sub { font-size: .7rem; color: var(--pl-text-3); margin-top: .3rem; }
+
+    /* ═══════════════ Panel Cards ═══════════════ */
+    .panel-card {
+      background: var(--pl-surface);
+      border: 1px solid var(--pl-border);
+      border-radius: var(--pl-radius);
+      box-shadow: var(--pl-shadow);
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: .75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--pl-border-light);
+    }
+    .panel-title { font-size: .82rem; font-weight: 600; color: var(--pl-text); }
+    .panel-body { padding: 0; }
+    .panel-body-scroll {
+      max-height: 400px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--pl-border) transparent;
+    }
+
+    /* ═══════════════ Tables ═══════════════ */
+    .pl-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .82rem;
+    }
+    .pl-table thead th {
+      position: sticky;
+      top: 0;
+      background: #fafbfc;
+      font-size: .68rem;
+      font-weight: 600;
+      color: var(--pl-text-3);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      padding: .55rem 1rem;
+      border-bottom: 1px solid var(--pl-border);
+      white-space: nowrap;
+      z-index: 1;
+    }
+    .pl-table tbody td {
+      padding: .55rem 1rem;
+      border-bottom: 1px solid var(--pl-border-light);
+      vertical-align: middle;
+    }
+    .pl-table tbody tr {
+      transition: background var(--pl-transition);
+    }
+    .pl-table tbody tr:hover {
+      background: rgba(99,102,241,.03);
+    }
+    .pl-table tbody tr:last-child td { border-bottom: none; }
+    .text-tabular { font-variant-numeric: tabular-nums; }
+    .text-end { text-align: right; }
+
+    /* ═══════════════ Return Badges ═══════════════ */
     .return-badge {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      gap: 0.25rem;
+      gap: .2rem;
+      font-size: .7rem;
+      font-weight: 600;
+      padding: .18rem .5rem;
       border-radius: 999px;
-      padding: 0.32rem 0.72rem;
-      font-weight: 800;
-      font-size: 0.84rem;
       white-space: nowrap;
-      min-width: 5.8rem;
-      border: 1px solid transparent;
     }
-    .return-up { color: #047857; background: #dcfce7; border-color: #bbf7d0; }
-    .return-down { color: #b91c1c; background: #fee2e2; border-color: #fecaca; }
-    .return-flat { color: #475569; background: #f1f5f9; border-color: #e2e8f0; }
-    .account-name-cell { min-width: 180px; }
-    .sticky-actions { position: sticky; right: 0; background: rgba(255,255,255,.96); box-shadow: -0.55rem 0 1rem rgba(255,255,255,.86); }
-    .table { --bs-table-hover-bg: rgba(37, 99, 235, 0.045); }
-    .table > :not(caption) > * > * { vertical-align: middle; padding-top: .85rem; padding-bottom: .85rem; }
-    .table thead th { font-size: .76rem; color: var(--ledger-muted); text-transform: uppercase; letter-spacing: .045em; font-weight: 800; }
-    .metric-label { color: var(--ledger-muted); font-size: .82rem; font-weight: 700; }
-    .metric-value { line-height: 1.12; letter-spacing: -.02em; }
-    .metric-icon {
-      width: 2.3rem;
-      height: 2.3rem;
-      display: inline-flex;
+    .return-up { color: #059669; background: var(--pl-green-bg); border: 1px solid var(--pl-green-border); }
+    .return-down { color: #dc2626; background: var(--pl-red-bg); border: 1px solid var(--pl-red-border); }
+    .return-flat { color: var(--pl-text-3); background: var(--pl-border-light); border: 1px solid var(--pl-border); }
+
+    /* ═══════════════ Trend Bar ═══════════════ */
+    .trend-bar {
+      height: 5px;
+      border-radius: 999px;
+      background: var(--pl-border-light);
+      overflow: hidden;
+      margin-top: .3rem;
+    }
+    .trend-bar .bar-fill {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--pl-accent), #818cf8);
+      transition: width .4s ease;
+    }
+    .trend-cell { min-width: 180px; }
+
+    /* ═══════════════ Account Chip ═══════════════ */
+    .account-chip {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+    }
+    .account-avatar {
+      width: 28px; height: 28px;
+      border-radius: var(--pl-radius-xs);
+      display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--ledger-primary);
-      background: rgba(37,99,235,.10);
-      border-radius: .9rem;
-      flex: 0 0 auto;
+      font-size: .7rem;
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(135deg, var(--pl-accent), #818cf8);
+      flex-shrink: 0;
     }
-    .hero-kicker { text-transform: uppercase; letter-spacing: .11em; font-weight: 800; }
-    .hero-meta { display: inline-flex; align-items: center; gap: .35rem; padding: .38rem .72rem; border-radius: 999px; background: rgba(255,255,255,.16); }
-    .panel-card { overflow: hidden; }
-    .table-responsive { scrollbar-color: rgba(100,116,139,.38) transparent; }
-    .form-label { color: #334155; font-weight: 700; font-size: .86rem; margin-bottom: .38rem; }
-    .form-control,
-    .form-select {
-      border-color: rgba(100,116,139,.22);
-      border-radius: .9rem;
-      min-height: 2.75rem;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.6);
+
+    /* ═══════════════ Month Pill ═══════════════ */
+    .month-pill {
+      display: inline-flex;
+      align-items: center;
+      font-size: .76rem;
+      font-weight: 500;
+      padding: .12rem .45rem;
+      border-radius: var(--pl-radius-xs);
+      background: var(--pl-border-light);
+      color: var(--pl-text-2);
     }
-    .form-control:focus,
-    .form-select:focus {
-      border-color: rgba(37,99,235,.55);
-      box-shadow: 0 0 0 .22rem rgba(37,99,235,.12);
+
+    /* ═══════════════ Buttons ═══════════════ */
+    .btn-action {
+      padding: .25rem .45rem;
+      font-size: .72rem;
+      border-radius: var(--pl-radius-xs);
+      border: 1px solid var(--pl-border);
+      background: var(--pl-surface);
+      color: var(--pl-text-2);
+      cursor: pointer;
+      transition: all var(--pl-transition);
+      line-height: 1;
     }
-    .input-group-text { border-radius: .9rem; border-color: rgba(100,116,139,.22); background: #f8fafc; color: var(--ledger-muted); font-weight: 800; }
-    .btn { border-radius: .85rem; font-weight: 700; }
-    .btn-primary { background: linear-gradient(135deg, var(--ledger-primary), var(--ledger-primary-dark)); border-color: transparent; box-shadow: 0 10px 20px rgba(37,99,235,.18); }
-    #toastContainer { position: sticky; top: .75rem; z-index: 20; }
-    .alert { border: 0; border-radius: 1rem; box-shadow: 0 12px 30px rgba(15,23,42,.10); }
-    .account-chip { display: inline-flex; align-items: center; gap: .65rem; }
-    .account-avatar { width: 2rem; height: 2rem; border-radius: .8rem; display: inline-flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(135deg, #2563eb, #16a34a); font-size: .9rem; box-shadow: 0 8px 18px rgba(37,99,235,.18); }
-    .month-pill { display: inline-flex; align-items: center; padding: .25rem .55rem; border-radius: 999px; background: #f1f5f9; color: #334155; font-weight: 700; }
-    .trend-cell { min-width: 220px; }
-    .trend-bar { height: .46rem; border-radius: 999px; background: #e2e8f0; overflow: hidden; margin-top: .38rem; }
-    .trend-bar > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #2563eb, #16a34a); }
-    @media (max-width: 575.98px) {
-      .navbar .container { align-items: flex-start !important; gap: .65rem; }
-      .navbar-brand { font-size: 1rem; white-space: normal; line-height: 1.25; }
-      #statusText { display: none; }
-      main.container { padding-left: .85rem; padding-right: .85rem; }
-      .card-body { padding: 1rem; }
-      .hero-card { min-height: 142px; }
-      .hero-card .display-5 { font-size: 2rem; word-break: break-word; }
-      .metric-icon { width: 2rem; height: 2rem; border-radius: .75rem; }
-      .quick-card,
-      .metric-card,
-      .panel-card { border-radius: 1rem; box-shadow: 0 12px 30px rgba(15,23,42,.09); }
-      .card-header { padding: .9rem 1rem; gap: .75rem; }
-      .card-header .btn { white-space: nowrap; }
-      .table > :not(caption) > * > * { padding: .72rem .65rem; }
-      .table thead th { font-size: .7rem; }
-      .sticky-actions { position: static; box-shadow: none; background: transparent; }
-      .account-name-cell { min-width: 150px; }
-      .btn-group-sm > .btn, .btn-sm { --bs-btn-padding-y: .35rem; --bs-btn-padding-x: .55rem; }
+    .btn-action:hover { border-color: var(--pl-accent); color: var(--pl-accent); }
+    .btn-action-danger { color: var(--pl-text-3); }
+    .btn-action-danger:hover { border-color: var(--pl-red); color: var(--pl-red); }
+    .btn-primary-pl {
+      padding: .35rem .85rem;
+      font-size: .76rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--pl-radius-xs);
+      background: var(--pl-accent);
+      color: #fff;
+      cursor: pointer;
+      transition: background var(--pl-transition);
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
     }
-    .text-tabular { font-variant-numeric: tabular-nums; }
+    .btn-primary-pl:hover { background: var(--pl-accent-hover); }
+
+    /* ═══════════════ Toast ═══════════════ */
+    #toastContainer { position: sticky; top: 60px; z-index: 200; }
+    .pl-toast {
+      padding: .55rem 1rem;
+      font-size: .82rem;
+      font-weight: 500;
+      border-radius: var(--pl-radius-sm);
+      margin-bottom: .5rem;
+      animation: fadeInDown .2s ease;
+    }
+    .pl-toast-success { background: var(--pl-green-bg); color: #059669; border: 1px solid var(--pl-green-border); }
+    .pl-toast-error { background: var(--pl-red-bg); color: #dc2626; border: 1px solid var(--pl-red-border); }
+
+    /* ═══════════════ Modal Overrides ═══════════════ */
+    .modal-content {
+      border: 1px solid var(--pl-border);
+      border-radius: var(--pl-radius);
+      box-shadow: 0 20px 60px rgba(0,0,0,.15);
+    }
+    .modal-header { border-bottom: 1px solid var(--pl-border-light); padding: 1rem 1.25rem; }
+    .modal-title { font-size: .95rem; font-weight: 600; }
+    .modal-body { padding: 1.25rem; }
+    .modal-body .form-label {
+      font-size: .75rem; font-weight: 500; color: var(--pl-text-2); margin-bottom: .3rem;
+    }
+    .modal-body .form-control {
+      border-radius: var(--pl-radius-xs);
+      border: 1px solid var(--pl-border);
+      font-size: .85rem;
+      padding: .5rem .75rem;
+    }
+    .modal-body .form-control:focus {
+      border-color: var(--pl-accent);
+      box-shadow: 0 0 0 3px var(--pl-accent-light);
+    }
+    .modal-footer { border-top: 1px solid var(--pl-border-light); padding: .75rem 1.25rem; }
+
+    /* ═══════════════ Animations ═══════════════ */
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .pl-table tbody tr { animation: fadeInUp .25s ease both; }
+
+    /* ═══════════════ Color utilities ═══════════════ */
+    .text-green { color: var(--pl-green); }
+    .text-red { color: var(--pl-red); }
+    .text-muted-2 { color: var(--pl-text-2); }
+    .text-muted-3 { color: var(--pl-text-3); }
+    .fw-600 { font-weight: 600; }
+
+    /* ═══════════════ Responsive 768px ═══════════════ */
+    @media (max-width: 768px) {
+      .quick-form { flex-wrap: wrap; }
+      .quick-form .form-group { flex: 1 1 calc(50% - .375rem); }
+      .quick-form .form-group-amount { flex: 1 1 calc(50% - .375rem); }
+      .quick-form .btn-submit { flex: 1 1 100%; justify-content: center; }
+      .hero-amount { font-size: 2rem; }
+      .hero-card { min-height: 170px; padding: 1.25rem; }
+    }
+
+    /* ═══════════════ Responsive 576px ═══════════════ */
+    @media (max-width: 576px) {
+      .pl-container { padding: .75rem .75rem; }
+      .quick-form { flex-direction: column; }
+      .quick-form .form-group,
+      .quick-form .form-group-amount { flex: 1 1 100%; }
+      .hero-amount { font-size: 1.75rem; }
+      .hero-card { min-height: 150px; padding: 1rem; }
+      .metric-card { padding: .85rem; }
+      .metric-value { font-size: 1.2rem; }
+      .pl-table { font-size: .76rem; }
+      .pl-table thead th { font-size: .62rem; padding: .45rem .65rem; }
+      .pl-table tbody td { padding: .45rem .65rem; }
+      .pl-navbar { height: 46px; }
+      .pl-nav-status { display: none; }
+      .account-chip { gap: .35rem; }
+      .account-avatar { width: 24px; height: 24px; font-size: .62rem; }
+      .btn-submit { width: 100%; justify-content: center; }
+    }
   </style>
 </head>
-<body class="bg-body-tertiary">
-  <nav class="navbar navbar-expand-lg bg-primary navbar-dark shadow-sm">
-    <div class="container">
-      <span class="navbar-brand fw-semibold">Personal Ledger · RMB</span>
-      <div class="d-flex align-items-center gap-2 text-white-50">
-        <span id="statusText" class="small">数据按需刷新</span>
-        <button class="btn btn-sm btn-light" id="refreshBtn">刷新</button>
+<body>
+  <!-- ═══ Navbar ═══ -->
+  <nav class="pl-navbar">
+    <div class="pl-navbar-inner">
+      <div class="pl-brand">
+        <span class="pl-brand-dot"></span>
+        Personal Ledger
+      </div>
+      <div class="pl-nav-actions">
+        <span id="statusText" class="pl-nav-status">数据按需刷新</span>
+        <button class="pl-btn-refresh" id="refreshBtn">刷新</button>
       </div>
     </div>
   </nav>
 
-  <main class="container py-3">
+  <main class="pl-container">
     <div id="toastContainer" class="mb-3"></div>
 
-    <div class="row g-3 mb-3">
-      <div class="col-12 col-xl-5">
-        <div class="card quick-card shadow-sm bg-white border-0">
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-              <div>
-                <h5 class="card-title mb-1 section-title">快速记账</h5>
-                <div class="text-secondary small">录入每月账户余额，自动计算本月与累计收益率</div>
-              </div>
-              <span class="badge text-bg-primary-subtle text-primary rounded-pill">RMB</span>
+    <!-- ═══ Quick Entry (collapsible horizontal) ═══ -->
+    <div class="quick-card mb-3">
+      <div class="quick-header" data-bs-toggle="collapse" data-bs-target="#quickBody" aria-expanded="true" aria-controls="quickBody">
+        <span><i class="bi bi-pencil-square me-1"></i>快速记账</span>
+        <i class="bi bi-chevron-down chevron-icon"></i>
+      </div>
+      <div class="collapse show" id="quickBody">
+        <form id="quickSnapshotForm" class="quick-form">
+          <div class="form-group">
+            <label>账户</label>
+            <select class="form-select" id="quickAccountSelect" name="account_id" required></select>
+          </div>
+          <div class="form-group">
+            <label>月份</label>
+            <input type="month" class="form-control" name="snapshot_month" value="<%= currentMonth %>" required />
+          </div>
+          <div class="form-group form-group-amount">
+            <label>余额（RMB）</label>
+            <div class="input-group">
+              <span class="input-group-text">¥</span>
+              <input type="text" class="form-control" name="balance" placeholder="120000.55" inputmode="decimal" required />
             </div>
-            <form id="quickSnapshotForm" class="row g-2">
-              <div class="col-12">
-                <label class="form-label">账户</label>
-                <select class="form-select" id="quickAccountSelect" name="account_id" required></select>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">月份</label>
-                <input type="month" class="form-control" name="snapshot_month" value="<%= currentMonth %>" required />
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">余额（RMB）</label>
-                <div class="input-group">
-                  <span class="input-group-text">¥</span>
-                  <input type="text" class="form-control" name="balance" placeholder="例如 120000.55" inputmode="decimal" required />
-                </div>
-              </div>
-              <div class="col-12 d-grid">
-                <button type="submit" class="btn btn-primary">
-                  <i class="bi bi-check2-circle me-1"></i>保存
-                </button>
-              </div>
-            </form>
+          </div>
+          <button type="submit" class="btn-submit">
+            <i class="bi bi-check2-circle"></i>保存
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ═══ Row 1: Hero (col-5) + Metrics 2x2 (col-7) ═══ -->
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-lg-5">
+        <div class="hero-card h-100">
+          <div>
+            <div class="hero-label">Total Assets</div>
+            <div id="cardTotalRmb" class="hero-amount">0.00</div>
+            <div id="heroChangeBadge" class="mt-2"></div>
+          </div>
+          <div class="hero-footer">
+            <span class="hero-meta"><i class="bi bi-calendar3"></i><span id="cardLastDate">-</span></span>
+            <span class="hero-meta"><i class="bi bi-currency-yen"></i>RMB</span>
           </div>
         </div>
       </div>
-
-      <div class="col-12 col-xl-7">
+      <div class="col-12 col-lg-7">
         <div class="row g-3">
-          <div class="col-12 col-lg-6">
-            <div class="card metric-card hero-card h-100">
-              <div class="card-body position-relative d-flex flex-column justify-content-between">
-                <div>
-                  <div class="small opacity-75 hero-kicker mb-2">Portfolio Overview</div>
-                  <div id="cardTotalRmb" class="display-5 fw-bold metric-value text-tabular">0.00</div>
-                </div>
-                <div class="mt-3 d-flex flex-wrap gap-2 small opacity-90">
-                  <span class="hero-meta"><i class="bi bi-calendar3"></i>最新月份 <span id="cardLastDate">-</span></span>
-                  <span class="hero-meta"><i class="bi bi-currency-yen"></i>RMB 汇总</span>
-                </div>
+          <div class="col-6">
+            <div class="metric-card">
+              <div class="metric-header">
+                <span class="metric-label">总资产变化</span>
+                <span class="metric-icon"><i class="bi bi-graph-up-arrow"></i></span>
+              </div>
+              <div>
+                <div id="cardTotalChange" class="metric-value text-tabular">-</div>
+                <div id="cardTotalChangeRange" class="metric-sub">等待下月数据</div>
               </div>
             </div>
           </div>
-          <div class="col-sm-6 col-lg-3">
-            <div class="card metric-card h-100">
-              <div class="card-body">
-                <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
-                  <div class="metric-label">总资产变化</div>
-                  <span class="metric-icon"><i class="bi bi-graph-up-arrow"></i></span>
-                </div>
-                <div id="cardTotalChange" class="fs-4 fw-bold metric-value text-tabular">-</div>
-                <div id="cardTotalChangeRange" class="small text-secondary mt-1">等待下月数据</div>
+          <div class="col-6">
+            <div class="metric-card">
+              <div class="metric-header">
+                <span class="metric-label">总收益率</span>
+                <span class="metric-icon"><i class="bi bi-percent"></i></span>
+              </div>
+              <div>
+                <div id="cardTotalReturn" class="metric-value">-</div>
+                <div class="metric-sub">按相邻两个月余额估算</div>
               </div>
             </div>
           </div>
-          <div class="col-sm-6 col-lg-3">
-            <div class="card metric-card h-100">
-              <div class="card-body">
-                <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
-                  <div class="metric-label">总收益率</div>
-                  <span class="metric-icon"><i class="bi bi-percent"></i></span>
-                </div>
-                <div id="cardTotalReturn" class="fs-4 fw-bold metric-value">-</div>
-                <div class="small text-secondary mt-1">按相邻两个月余额估算</div>
+          <div class="col-6">
+            <div class="metric-card">
+              <div class="metric-header">
+                <span class="metric-label">账户数量</span>
+                <span class="metric-icon"><i class="bi bi-wallet2"></i></span>
+              </div>
+              <div>
+                <div id="cardAccountsCount" class="metric-value text-tabular">0</div>
               </div>
             </div>
           </div>
-          <div class="col-sm-6 col-lg-3">
-            <div class="card metric-card h-100">
-              <div class="card-body">
-                <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
-                  <div class="metric-label">账户数量</div>
-                  <span class="metric-icon"><i class="bi bi-wallet2"></i></span>
-                </div>
-                <div id="cardAccountsCount" class="fs-4 fw-bold metric-value text-tabular">0</div>
+          <div class="col-6">
+            <div class="metric-card">
+              <div class="metric-header">
+                <span class="metric-label">记录条数</span>
+                <span class="metric-icon"><i class="bi bi-journal-check"></i></span>
               </div>
-            </div>
-          </div>
-          <div class="col-sm-6 col-lg-3">
-            <div class="card metric-card h-100">
-              <div class="card-body">
-                <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
-                  <div class="metric-label">记录条数</div>
-                  <span class="metric-icon"><i class="bi bi-journal-check"></i></span>
-                </div>
-                <div id="cardSnapshotsCount" class="fs-4 fw-bold metric-value text-tabular">0</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-12">
-            <div class="card panel-card">
-              <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <h6 class="mb-0">月度资产变化（RMB 汇总）</h6>
-                </div>
-                <div class="table-responsive">
-                  <table class="table table-sm align-middle mb-0">
-                    <thead>
-                      <tr>
-                        <th>月份</th>
-                        <th class="text-end">总资产（RMB）</th>
-                      </tr>
-                    </thead>
-                    <tbody id="trendTbody"></tbody>
-                  </table>
-                </div>
+              <div>
+                <div id="cardSnapshotsCount" class="metric-value text-tabular">0</div>
               </div>
             </div>
           </div>
@@ -300,59 +677,78 @@
       </div>
     </div>
 
-    <div class="row g-3">
-      <div class="col-12 col-xl-6">
-        <div class="card panel-card">
-          <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <span class="fw-semibold">账户收益率概览</span>
-            <button class="btn btn-sm btn-primary" id="openAccountModalBtn">
-              <i class="bi bi-plus-circle me-1"></i>新增账户
-            </button>
+    <!-- ═══ Row 2: Trend (col-7) + Account Performance (col-5) ═══ -->
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-lg-7">
+        <div class="panel-card">
+          <div class="panel-header">
+            <span class="panel-title">月度资产趋势</span>
           </div>
-          <div class="card-body p-0">
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                  <tr>
-                    <th class="account-name-cell">账户名称</th>
-                    <th class="text-end">最新余额</th>
-                    <th class="text-end">本月变化</th>
-                    <th class="text-end">本月收益率</th>
-                    <th class="text-end">累计变化</th>
-                    <th class="text-end">累计收益率</th>
-                    <th class="text-end sticky-actions">操作</th>
-                  </tr>
-                </thead>
-                <tbody id="accountsTbody"></tbody>
-              </table>
-            </div>
+          <div class="panel-body">
+            <table class="pl-table">
+              <thead>
+                <tr>
+                  <th>月份</th>
+                  <th>总资产（RMB）</th>
+                  <th class="text-end">环比变化</th>
+                </tr>
+              </thead>
+              <tbody id="trendTbody"></tbody>
+            </table>
           </div>
         </div>
       </div>
+      <div class="col-12 col-lg-5">
+        <div class="panel-card">
+          <div class="panel-header">
+            <span class="panel-title">账户表现</span>
+            <button class="btn-primary-pl" id="openAccountModalBtn">
+              <i class="bi bi-plus"></i>新增
+            </button>
+          </div>
+          <div class="panel-body">
+            <table class="pl-table">
+              <thead>
+                <tr>
+                  <th>账户</th>
+                  <th class="text-end">余额 / 变动</th>
+                  <th class="text-end">收益率</th>
+                  <th class="text-end">操作</th>
+                </tr>
+              </thead>
+              <tbody id="accountsTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      <div class="col-12 col-xl-6">
-        <div class="card panel-card">
-          <div class="card-header bg-white fw-semibold">最近余额记录</div>
-          <div class="card-body p-0">
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                  <tr>
-                    <th>日期</th>
-                    <th>账户</th>
-                    <th class="text-end">余额（RMB）</th>
-                    <th class="text-end">操作</th>
-                  </tr>
-                </thead>
-                <tbody id="snapshotsTbody"></tbody>
-              </table>
-            </div>
+    <!-- ═══ Row 3: Recent Snapshots (full width, scrollable) ═══ -->
+    <div class="row g-3">
+      <div class="col-12">
+        <div class="panel-card">
+          <div class="panel-header">
+            <span class="panel-title">最近余额记录</span>
+          </div>
+          <div class="panel-body panel-body-scroll">
+            <table class="pl-table">
+              <thead>
+                <tr>
+                  <th>日期</th>
+                  <th>账户</th>
+                  <th class="text-end">余额（RMB）</th>
+                  <th class="text-end">操作</th>
+                </tr>
+              </thead>
+              <tbody id="snapshotsTbody"></tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
   </main>
 
+  <!-- ═══ Account Modal ═══ -->
   <div class="modal fade" id="accountModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
@@ -364,11 +760,11 @@
           <div class="modal-body">
             <input type="hidden" name="id" />
             <label class="form-label">账户名称</label>
-            <input class="form-control" name="name" required placeholder="例如：招商银行 / 币安现货 / 工资卡" />
+            <input class="form-control" name="name" required placeholder="招商银行 / 币安现货 / 工资卡" />
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
-            <button type="submit" class="btn btn-primary">保存</button>
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="font-size:.82rem;border-radius:var(--pl-radius-xs);">取消</button>
+            <button type="submit" class="btn-primary-pl">保存</button>
           </div>
         </form>
       </div>
