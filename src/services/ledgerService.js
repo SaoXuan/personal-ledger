@@ -242,6 +242,107 @@ function getSummaryRmb() {
   return total.toFixed(2);
 }
 
+function getAccountPerformance() {
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        a.id,
+        a.name,
+        curr.snapshot_date AS latest_date,
+        curr.balance AS latest_balance,
+        prev.snapshot_date AS previous_date,
+        prev.balance AS previous_balance
+      FROM accounts a
+      LEFT JOIN snapshots curr
+        ON curr.account_id = a.id
+       AND curr.snapshot_date = (
+          SELECT MAX(s1.snapshot_date)
+            FROM snapshots s1
+           WHERE s1.account_id = a.id
+        )
+      LEFT JOIN snapshots prev
+        ON prev.account_id = a.id
+       AND prev.snapshot_date = (
+          SELECT MAX(s2.snapshot_date)
+            FROM snapshots s2
+           WHERE s2.account_id = a.id
+             AND curr.snapshot_date IS NOT NULL
+             AND s2.snapshot_date < curr.snapshot_date
+        )
+      ORDER BY a.name
+    `
+    )
+    .all();
+
+  return rows.map((row) => {
+    const latest = parseBalanceLenient(row.latest_balance);
+    const previous = row.previous_balance === null || row.previous_balance === undefined
+      ? null
+      : parseBalanceLenient(row.previous_balance);
+    const change = previous ? latest.minus(previous) : null;
+    const returnRate = previous && !previous.isZero()
+      ? change.div(previous).times(100)
+      : null;
+
+    return {
+      id: row.id,
+      name: row.name,
+      latest_date: row.latest_date ? row.latest_date.slice(0, 7) : "",
+      latest_balance: row.latest_balance === null || row.latest_balance === undefined
+        ? ""
+        : latest.toFixed(2),
+      previous_date: row.previous_date ? row.previous_date.slice(0, 7) : "",
+      previous_balance: previous ? previous.toFixed(2) : "",
+      change_amount: change ? change.toFixed(2) : "",
+      return_rate: returnRate ? returnRate.toFixed(2) : "",
+      direction: !change || change.isZero() ? "flat" : change.isPositive() ? "up" : "down",
+    };
+  });
+}
+
+function getPerformanceSummary() {
+  const latestBalances = getLatestBalances();
+  const latestMonth = db.prepare("SELECT MAX(snapshot_date) AS d FROM snapshots").get().d;
+  if (!latestMonth) {
+    return { latestMonth: "", previousMonth: "", changeAmount: "", returnRate: "" };
+  }
+
+  const previousMonth = db
+    .prepare("SELECT MAX(snapshot_date) AS d FROM snapshots WHERE snapshot_date < ?")
+    .get(latestMonth).d;
+
+  if (!previousMonth) {
+    return {
+      latestMonth: latestMonth.slice(0, 7),
+      previousMonth: "",
+      changeAmount: "",
+      returnRate: "",
+    };
+  }
+
+  const totalForDate = (snapshotDate) =>
+    db
+      .prepare("SELECT balance FROM snapshots WHERE snapshot_date = ?")
+      .all(snapshotDate)
+      .reduce((sum, row) => sum.plus(parseBalanceLenient(row.balance)), decimal(0));
+
+  const latestTotal = latestBalances.reduce(
+    (sum, row) => sum.plus(parseBalanceLenient(row.balance)),
+    decimal(0)
+  );
+  const previousTotal = totalForDate(previousMonth);
+  const changeAmount = latestTotal.minus(previousTotal);
+  const returnRate = previousTotal.isZero() ? null : changeAmount.div(previousTotal).times(100);
+
+  return {
+    latestMonth: latestMonth.slice(0, 7),
+    previousMonth: previousMonth.slice(0, 7),
+    changeAmount: changeAmount.toFixed(2),
+    returnRate: returnRate ? returnRate.toFixed(2) : "",
+  };
+}
+
 function getTrendData() {
   const rows = db
     .prepare(
@@ -316,6 +417,8 @@ module.exports = {
   deleteSnapshot,
   getLatestBalances,
   getSummaryRmb,
+  getAccountPerformance,
+  getPerformanceSummary,
   getTrendData,
   getRecentSnapshots,
   countStats,

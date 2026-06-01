@@ -11,6 +11,8 @@ const {
   upsertSnapshot,
   deleteSnapshot,
   getSummaryRmb,
+  getAccountPerformance,
+  getPerformanceSummary,
   getTrendData,
   getRecentSnapshots,
 } = require("../services/ledgerService");
@@ -45,11 +47,27 @@ function normalizeSnapshots(snapshots) {
   }));
 }
 
+function normalizePerformance(rows) {
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    latestDate: row.latest_date || "",
+    latestBalance: row.latest_balance || "",
+    previousDate: row.previous_date || "",
+    previousBalance: row.previous_balance || "",
+    changeAmount: row.change_amount || "",
+    returnRate: row.return_rate || "",
+    direction: row.direction || "flat",
+  }));
+}
+
 function buildDashboardPayload() {
   return {
     stats: countStats(),
     summaryRmb: getSummaryRmb(),
+    performanceSummary: getPerformanceSummary(),
     trend: getTrendData(),
+    accountPerformance: normalizePerformance(getAccountPerformance()),
     accounts: normalizeAccounts(getAccountsWithLatest()),
     recentSnapshots: normalizeSnapshots(listSnapshots({ limit: 100 })),
     quickSnapshots: getRecentSnapshots(16).map((x) => ({

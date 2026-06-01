@@ -2,7 +2,9 @@
   const state = {
     stats: { accounts: 0, snapshots: 0, lastDate: "-" },
     summaryRmb: "0.00",
+    performanceSummary: {},
     accounts: [],
+    accountPerformance: [],
     recentSnapshots: [],
     trend: [],
   };
@@ -22,6 +24,9 @@
     cardAccountsCount: document.getElementById("cardAccountsCount"),
     cardSnapshotsCount: document.getElementById("cardSnapshotsCount"),
     cardLastDate: document.getElementById("cardLastDate"),
+    cardTotalChange: document.getElementById("cardTotalChange"),
+    cardTotalReturn: document.getElementById("cardTotalReturn"),
+    cardTotalChangeRange: document.getElementById("cardTotalChangeRange"),
     toastContainer: document.getElementById("toastContainer"),
   };
 
@@ -45,9 +50,36 @@
   }
 
   function formatNumber(value) {
+    if (value === null || value === undefined || value === "") return "-";
     const n = Number(value);
     if (!Number.isFinite(n)) return String(value ?? "-");
-    return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function formatSignedNumber(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return "-";
+    const prefix = n > 0 ? "+" : "";
+    return `${prefix}${formatNumber(n)}`;
+  }
+
+  function formatReturnRate(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return "暂无";
+    const prefix = n > 0 ? "+" : "";
+    return `${prefix}${n.toFixed(2)}%`;
+  }
+
+  function directionClass(direction) {
+    if (direction === "up") return "return-up";
+    if (direction === "down") return "return-down";
+    return "return-flat";
+  }
+
+  function directionIcon(direction) {
+    if (direction === "up") return "bi-arrow-up-right";
+    if (direction === "down") return "bi-arrow-down-right";
+    return "bi-dash-lg";
   }
 
   function showToast(message, type = "success") {
@@ -86,6 +118,20 @@
     dom.cardAccountsCount.textContent = String(state.stats.accounts ?? 0);
     dom.cardSnapshotsCount.textContent = String(state.stats.snapshots ?? 0);
     dom.cardLastDate.textContent = state.stats.lastDate || "-";
+
+    const summary = state.performanceSummary || {};
+    dom.cardTotalChange.textContent = summary.changeAmount
+      ? formatSignedNumber(summary.changeAmount)
+      : "-";
+    dom.cardTotalReturn.textContent = summary.returnRate
+      ? formatReturnRate(summary.returnRate)
+      : "-";
+    dom.cardTotalReturn.className = `fs-4 fw-bold ${
+      Number(summary.returnRate) > 0 ? "text-success" : Number(summary.returnRate) < 0 ? "text-danger" : ""
+    }`;
+    dom.cardTotalChangeRange.textContent = summary.previousMonth
+      ? `${summary.previousMonth} → ${summary.latestMonth}`
+      : "等待下月数据";
   }
 
   function renderAccountSelect() {
@@ -115,19 +161,34 @@
   }
 
   function renderAccountsTable() {
-    if (!state.accounts.length) {
+    const rows = state.accountPerformance.length ? state.accountPerformance : state.accounts;
+    if (!rows.length) {
       dom.accountsTbody.innerHTML =
-        '<tr><td colspan="3" class="text-secondary">还没有账户，先新增一个。</td></tr>';
+        '<tr><td colspan="6" class="text-secondary">还没有账户，先新增一个。</td></tr>';
       return;
     }
 
-    dom.accountsTbody.innerHTML = state.accounts
-      .map(
-        (row) => `
+    dom.accountsTbody.innerHTML = rows
+      .map((row) => {
+        const hasPrevious = row.previousBalance !== undefined && row.previousBalance !== "";
+        const direction = row.direction || "flat";
+        const returnBadge = hasPrevious
+          ? `<span class="return-badge ${directionClass(direction)}"><i class="bi ${directionIcon(direction)}"></i>${formatReturnRate(row.returnRate)}</span>`
+          : '<span class="text-secondary small">下月生成</span>';
+
+        return `
       <tr>
-        <td class="fw-semibold">${escapeHtml(row.name)}</td>
-        <td class="text-end">${formatNumber(row.latestBalance)}</td>
-        <td class="text-end">
+        <td>
+          <div class="fw-semibold">${escapeHtml(row.name)}</div>
+          <div class="small text-secondary">最新：${escapeHtml(row.latestDate || "-")}</div>
+        </td>
+        <td class="text-end fw-semibold">${formatNumber(row.latestBalance)}</td>
+        <td class="text-end text-secondary">${hasPrevious ? formatNumber(row.previousBalance) : "-"}</td>
+        <td class="text-end ${direction === "up" ? "text-success" : direction === "down" ? "text-danger" : "text-secondary"}">
+          ${hasPrevious ? formatSignedNumber(row.changeAmount) : "-"}
+        </td>
+        <td class="text-end">${returnBadge}</td>
+        <td class="text-end sticky-actions">
           <div class="btn-group btn-group-sm">
             <button class="btn btn-outline-primary" data-action="quick-fill" data-id="${row.id}">记一笔</button>
             <button class="btn btn-outline-secondary" data-action="edit-account" data-id="${row.id}">编辑</button>
@@ -135,8 +196,8 @@
           </div>
         </td>
       </tr>
-    `
-      )
+    `;
+      })
       .join("");
   }
 
@@ -171,7 +232,9 @@
 
     state.stats = data.stats || state.stats;
     state.summaryRmb = data.summaryRmb || "0.00";
+    state.performanceSummary = data.performanceSummary || {};
     state.accounts = data.accounts || [];
+    state.accountPerformance = data.accountPerformance || [];
     state.recentSnapshots = data.recentSnapshots || [];
     state.trend = data.trend || [];
 
@@ -291,7 +354,10 @@
   async function start() {
     bindEvents();
     await loadBootstrap(true);
-    dom.statusText.textContent = "数据按需刷新";
+    dom.statusText.textContent = "数据每 15 秒自动刷新";
+    setInterval(() => {
+      loadBootstrap(true).catch((error) => showToast(error.message, "error"));
+    }, 15000);
   }
 
   start().catch((error) => {
