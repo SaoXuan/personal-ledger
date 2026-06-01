@@ -9,6 +9,7 @@
     trend: [],
     snapshotsByAccount: {},
     filteredSnapshots: [],
+    notes: [],
   };
 
   let chartInstance = null;
@@ -45,6 +46,11 @@
     snapshotAccountFilter: document.getElementById("snapshotAccountFilter"),
     toggleZeroAccounts: document.getElementById("toggleZeroAccounts"),
     exportCsvBtn: document.getElementById("exportCsvBtn"),
+    notesList: document.getElementById("notesList"),
+    noteForm: document.getElementById("noteForm"),
+    noteFormContainer: document.getElementById("noteFormContainer"),
+    openNoteFormBtn: document.getElementById("openNoteFormBtn"),
+    cancelNoteBtn: document.getElementById("cancelNoteBtn"),
     cardTotalChangeCard: null,
     cardTotalReturnCard: null,
   };
@@ -632,6 +638,74 @@
     }
   }
 
+  /* ═══════════════ Render: Notes ═══════════════ */
+  function renderNotes() {
+    if (!dom.notesList) return;
+    const notes = state.notes || [];
+    if (!notes.length) {
+      dom.notesList.innerHTML = '<div class="note-empty">还没有投资小记，点击「写一条」开始记录。</div>';
+      return;
+    }
+    dom.notesList.innerHTML = notes
+      .map((note, idx) => {
+        const date = note.note_date || "";
+        const updatedTag = note.updated_at ? ' · 已编辑' : '';
+        const delay = idx * 20;
+        return `
+      <div class="note-item" style="animation-delay:${delay}ms">
+        <div class="note-content">${escapeHtml(note.content)}</div>
+        <div class="note-meta">
+          <span>${escapeHtml(date)}${updatedTag}</span>
+          <div style="display:flex;gap:.3rem;">
+            <button class="btn-action" data-action="edit-note" data-id="${note.id}" title="编辑"><i class="bi bi-pencil-square"></i></button>
+            <button class="btn-action btn-action-danger" data-action="delete-note" data-id="${note.id}" title="删除"><i class="bi bi-trash"></i></button>
+          </div>
+        </div>
+      </div>`;
+      })
+      .join("");
+  }
+
+  function showNoteForm(noteId, content) {
+    dom.noteFormContainer.style.display = "";
+    dom.noteForm.elements.id.value = noteId || "";
+    dom.noteForm.elements.content.value = content || "";
+    dom.noteForm.elements.content.focus();
+  }
+
+  function hideNoteForm() {
+    dom.noteFormContainer.style.display = "none";
+    dom.noteForm.reset();
+    dom.noteForm.elements.id.value = "";
+  }
+
+  async function onNoteSubmit(event) {
+    event.preventDefault();
+    const id = dom.noteForm.elements.id.value;
+    const content = dom.noteForm.elements.content.value.trim();
+    if (!content) return;
+
+    if (id) {
+      await apiSend(`/api/notes/${id}`, "PUT", { content });
+      showToast("笔记已更新");
+    } else {
+      await apiSend("/api/notes", "POST", { content });
+      showToast("笔记已保存");
+    }
+    hideNoteForm();
+    await loadNotes();
+  }
+
+  async function loadNotes() {
+    try {
+      const data = await apiGet("/api/notes");
+      state.notes = data.notes || [];
+      renderNotes();
+    } catch (e) {
+      console.error("Failed to load notes:", e);
+    }
+  }
+
   /* ═══════════════ Data Loading ═══════════════ */
   async function loadBootstrap(silent = false) {
     const data = await apiGet("/api/bootstrap");
@@ -643,6 +717,7 @@
     state.accountPerformance = data.accountPerformance || [];
     state.recentSnapshots = data.recentSnapshots || [];
     state.trend = data.trend || [];
+    state.notes = data.notes || [];
 
     await loadSnapshotData();
 
@@ -651,6 +726,7 @@
     renderSnapshotAccountFilter();
     renderHeroSparkline();
     renderAccountsTable();
+    renderNotes();
     await loadFilteredSnapshots();
 
     if (!silent) {
@@ -822,6 +898,41 @@
         closeChartModal();
       }
     });
+
+    /* Notes events */
+    if (dom.openNoteFormBtn) {
+      dom.openNoteFormBtn.addEventListener("click", () => showNoteForm("", ""));
+    }
+    if (dom.cancelNoteBtn) {
+      dom.cancelNoteBtn.addEventListener("click", hideNoteForm);
+    }
+    if (dom.noteForm) {
+      dom.noteForm.addEventListener("submit", (event) => {
+        onNoteSubmit(event).catch((error) => showToast(error.message, "error"));
+      });
+    }
+    if (dom.notesList) {
+      dom.notesList.addEventListener("click", (event) => {
+        const btn = event.target.closest("button[data-action]");
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const id = Number(btn.dataset.id || 0);
+        if (!id) return;
+
+        if (action === "edit-note") {
+          const note = state.notes.find((n) => n.id === id);
+          if (note) showNoteForm(id, note.content);
+          return;
+        }
+
+        if (action === "delete-note") {
+          if (!confirm("确认删除这条笔记吗？")) return;
+          apiSend(`/api/notes/${id}`, "DELETE")
+            .then(() => { showToast("笔记已删除"); return loadNotes(); })
+            .catch((error) => showToast(error.message, "error"));
+        }
+      });
+    }
   }
 
   /* ═══════════════ Start ═══════════════ */

@@ -52,6 +52,16 @@ function initSchema() {
 
     CREATE INDEX IF NOT EXISTS idx_snapshots_account_date ON snapshots(account_id, snapshot_date);
     CREATE INDEX IF NOT EXISTS idx_snapshots_date ON snapshots(snapshot_date);
+
+    CREATE TABLE IF NOT EXISTS investment_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      content TEXT NOT NULL,
+      note_date TEXT NOT NULL DEFAULT (date('now')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_notes_date ON investment_notes(note_date DESC);
   `);
 
   // 统一历史与未来数据口径：全部以 CNY 计量

@@ -15,6 +15,10 @@ const {
   getPerformanceSummary,
   getTrendData,
   getRecentSnapshots,
+  listNotes,
+  createNote,
+  updateNote,
+  deleteNote,
 } = require("../services/ledgerService");
 
 const router = express.Router();
@@ -89,6 +93,7 @@ function buildDashboardPayload() {
       snapshotMonth: x.snapshot_month,
       balance: x.balance,
     })),
+    notes: listNotes(),
   };
 }
 
@@ -174,6 +179,42 @@ router.delete("/api/snapshots/:id", (req, res) => {
     if (!id) return fail(res, 400, "无效记录 ID");
     deleteSnapshot(id);
     return ok(res, { message: "记录已删除" });
+  } catch (error) {
+    return fail(res, 400, error.message);
+  }
+});
+
+/* ═══════════════ Notes CRUD ═══════════════ */
+router.get("/api/notes", (req, res) => {
+  return ok(res, { notes: listNotes() });
+});
+
+router.post("/api/notes", (req, res) => {
+  try {
+    const id = createNote(req.body);
+    return ok(res, { message: "笔记已保存", id });
+  } catch (error) {
+    return fail(res, 400, error.message);
+  }
+});
+
+router.put("/api/notes/:id", (req, res) => {
+  try {
+    const id = Number(req.params.id || 0);
+    if (!id) return fail(res, 400, "无效笔记 ID");
+    updateNote(id, req.body);
+    return ok(res, { message: "笔记已更新" });
+  } catch (error) {
+    return fail(res, 400, error.message);
+  }
+});
+
+router.delete("/api/notes/:id", (req, res) => {
+  try {
+    const id = Number(req.params.id || 0);
+    if (!id) return fail(res, 400, "无效笔记 ID");
+    deleteNote(id);
+    return ok(res, { message: "笔记已删除" });
   } catch (error) {
     return fail(res, 400, error.message);
   }

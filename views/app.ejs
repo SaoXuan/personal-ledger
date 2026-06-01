@@ -645,6 +645,59 @@
     }
     .pl-toggle-link:hover { background: var(--pl-accent-light); }
 
+    /* ═══════════════ Notes ═══════════════ */
+    .note-item {
+      padding: .75rem 1rem;
+      border-bottom: 1px solid var(--pl-border-light);
+      transition: background var(--pl-transition);
+    }
+    .note-item:last-child { border-bottom: none; }
+    .note-item:hover { background: rgba(99,102,241,.03); }
+    .note-content {
+      font-size: .82rem;
+      line-height: 1.6;
+      color: var(--pl-text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .note-meta {
+      font-size: .68rem;
+      color: var(--pl-text-3);
+      margin-top: .35rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .note-form-area {
+      width: 100%;
+      min-height: 80px;
+      font-size: .82rem;
+      font-family: var(--pl-font);
+      border: 1px solid var(--pl-border);
+      border-radius: var(--pl-radius-xs);
+      padding: .5rem .75rem;
+      resize: vertical;
+      line-height: 1.6;
+    }
+    .note-form-area:focus {
+      border-color: var(--pl-accent);
+      box-shadow: 0 0 0 3px var(--pl-accent-light);
+      outline: none;
+    }
+    .note-form-row {
+      display: flex;
+      gap: .5rem;
+      align-items: flex-end;
+      padding: .75rem 1rem;
+      border-bottom: 1px solid var(--pl-border-light);
+    }
+    .note-empty {
+      padding: 1.5rem 1rem;
+      text-align: center;
+      color: var(--pl-text-3);
+      font-size: .8rem;
+    }
+
     /* ═══════════════ Color utilities ═══════════════ */
     .text-green { color: var(--pl-green); }
     .text-red { color: var(--pl-red); }
@@ -830,7 +883,36 @@
       </div>
     </div>
 
-    <!-- ═══ Row 3: Recent Snapshots (full width, scrollable) ═══ -->
+    <!-- ═══ Row 3: Investment Notes ═══ -->
+    <div class="row g-3 mb-3">
+      <div class="col-12">
+        <div class="panel-card">
+          <div class="panel-header">
+            <span class="panel-title">投资小记</span>
+            <button class="btn-primary-pl" id="openNoteFormBtn">
+              <i class="bi bi-plus"></i>写一条
+            </button>
+          </div>
+          <div class="panel-body">
+            <div id="noteFormContainer" style="display:none;">
+              <form id="noteForm" class="note-form-row">
+                <input type="hidden" name="id" value="" />
+                <div style="flex:1;">
+                  <textarea class="note-form-area" name="content" placeholder="记录你的投资心得、市场观察、策略思考..." required></textarea>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:.35rem;">
+                  <button type="submit" class="btn-submit" style="height:32px;padding:0 .85rem;font-size:.78rem;">保存</button>
+                  <button type="button" class="btn-action" id="cancelNoteBtn" style="height:32px;padding:0 .85rem;font-size:.78rem;">取消</button>
+                </div>
+              </form>
+            </div>
+            <div id="notesList" class="panel-body-scroll" style="max-height:360px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Row 4: Recent Snapshots (full width, scrollable) ═══ -->
     <div class="row g-3">
       <div class="col-12">
         <div class="panel-card">

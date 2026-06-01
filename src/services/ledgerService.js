@@ -481,6 +481,55 @@ function countStats() {
   };
 }
 
+function listNotes({ limit = 50 } = {}) {
+  return db
+    .prepare(
+      `
+      SELECT id, content, note_date, created_at, updated_at
+      FROM investment_notes
+      ORDER BY note_date DESC, id DESC
+      LIMIT ?
+    `
+    )
+    .all(limit);
+}
+
+function createNote(input) {
+  const content = String(input.content || "").trim();
+  if (!content) {
+    throw new Error("笔记内容不能为空");
+  }
+  const noteDate = input.note_date || dayjs().format("YYYY-MM-DD");
+  const result = db
+    .prepare(
+      `
+      INSERT INTO investment_notes (content, note_date)
+      VALUES (@content, @noteDate)
+    `
+    )
+    .run({ content, noteDate });
+  return result.lastInsertRowid;
+}
+
+function updateNote(id, input) {
+  const content = String(input.content || "").trim();
+  if (!content) {
+    throw new Error("笔记内容不能为空");
+  }
+  db.prepare(
+    `
+    UPDATE investment_notes
+       SET content = @content,
+           updated_at = datetime('now')
+     WHERE id = @id
+  `
+  ).run({ id, content });
+}
+
+function deleteNote(id) {
+  db.prepare("DELETE FROM investment_notes WHERE id = ?").run(id);
+}
+
 module.exports = {
   getAccountsWithLatest,
   getAccountById,
@@ -496,5 +545,9 @@ module.exports = {
   getPerformanceSummary,
   getTrendData,
   getRecentSnapshots,
+  listNotes,
+  createNote,
+  updateNote,
+  deleteNote,
   countStats,
 };
