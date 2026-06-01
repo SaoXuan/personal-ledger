@@ -8,6 +8,7 @@
     recentSnapshots: [],
     trend: [],
     snapshotsByAccount: {},
+    filteredSnapshots: [],
   };
 
   let chartInstance = null;
@@ -39,6 +40,7 @@
     chartModalClose: document.getElementById("chartModalClose"),
     chartCanvas: document.getElementById("chartCanvas"),
     heroEyeToggle: document.getElementById("heroEyeToggle"),
+    snapshotMonthFilter: document.getElementById("snapshotMonthFilter"),
   };
 
   const accountModalEl = document.getElementById("accountModal");
@@ -366,15 +368,15 @@
   }
 
   /* ═══════════════ Render: Snapshots Table ═══════════════ */
-  function renderSnapshotsTable() {
-    const rows = state.recentSnapshots.slice(0, 80);
-    if (!rows.length) {
+  function renderSnapshotsTable(rows) {
+    const data = rows || state.filteredSnapshots || [];
+    if (!data.length) {
       dom.snapshotsTbody.innerHTML =
-        '<tr><td colspan="4" class="text-muted-3" style="padding:1rem;">暂无余额记录。</td></tr>';
+        '<tr><td colspan="4" class="text-muted-3" style="padding:1rem;">该月暂无余额记录。</td></tr>';
       return;
     }
 
-    dom.snapshotsTbody.innerHTML = rows
+    dom.snapshotsTbody.innerHTML = data
       .map(
         (row, idx) => {
           const delay = idx * 20;
@@ -389,14 +391,33 @@
         </td>
         <td class="text-end text-tabular fw-600" style="font-size:.85rem;">${formatNumber(row.balance)}</td>
         <td class="text-end">
-          <button class="btn-action btn-action-danger" data-action="delete-snapshot" data-id="${row.id}">
-            <i class="bi bi-trash"></i>
-          </button>
+          <div style="display:flex;gap:.3rem;justify-content:flex-end;">
+            <button class="btn-action" data-action="edit-snapshot" data-id="${row.id}" data-account-id="${row.accountId}" data-month="${escapeHtml(row.snapshotMonth)}" data-balance="${row.balance}" title="编辑">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+            <button class="btn-action btn-action-danger" data-action="delete-snapshot" data-id="${row.id}">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
         </td>
       </tr>`;
         }
       )
       .join("");
+  }
+
+  /* ═══════════════ Filtered Snapshots Loading ═══════════════ */
+  async function loadFilteredSnapshots() {
+    const month = dom.snapshotMonthFilter.value;
+    if (!month) return;
+    try {
+      const data = await apiGet(`/api/snapshots?month=${encodeURIComponent(month)}`);
+      state.filteredSnapshots = data.snapshots || [];
+      renderSnapshotsTable();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load filtered snapshots:", e);
+    }
   }
 
   /* ═══════════════ Snapshot Data for Sparklines ═══════════════ */
@@ -529,7 +550,7 @@
     renderAccountSelect();
     renderHeroSparkline();
     renderAccountsTable();
-    renderSnapshotsTable();
+    await loadFilteredSnapshots();
 
     if (!silent) {
       dom.statusText.textContent = "数据已更新";
@@ -644,11 +665,32 @@
     });
 
     dom.snapshotsTbody.addEventListener("click", (event) => {
-      const btn = event.target.closest("button[data-action='delete-snapshot']");
+      const btn = event.target.closest("button[data-action]");
       if (!btn) return;
+      const action = btn.dataset.action;
       const id = Number(btn.dataset.id || 0);
       if (!id) return;
-      removeSnapshot(id).catch((error) => showToast(error.message, "error"));
+
+      if (action === "edit-snapshot") {
+        const accountId = btn.dataset.accountId;
+        const month = btn.dataset.month;
+        const balance = btn.dataset.balance;
+        dom.quickAccountSelect.value = accountId;
+        dom.quickSnapshotForm.elements.snapshot_month.value = month;
+        dom.quickSnapshotForm.elements.balance.value = balance;
+        dom.quickSnapshotForm.scrollIntoView({ behavior: "smooth", block: "center" });
+        dom.quickSnapshotForm.elements.balance.focus();
+        return;
+      }
+
+      if (action === "delete-snapshot") {
+        removeSnapshot(id).catch((error) => showToast(error.message, "error"));
+      }
+    });
+
+    /* Month filter */
+    dom.snapshotMonthFilter.addEventListener("change", () => {
+      loadFilteredSnapshots().catch((error) => showToast(error.message, "error"));
     });
 
     /* Chart modal close handlers */

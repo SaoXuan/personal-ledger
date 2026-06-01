@@ -144,10 +144,12 @@ router.delete("/api/accounts/:id", (req, res) => {
 
 router.get("/api/snapshots", (req, res) => {
   const accountId = req.query.accountId ? Number(req.query.accountId) : null;
+  const month = req.query.month || null;
   return ok(res, {
     snapshots: normalizeSnapshots(
       listSnapshots({
         accountId: accountId || null,
+        month,
         limit: 200,
       })
     ),

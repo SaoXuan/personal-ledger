@@ -144,7 +144,7 @@ function deleteAccount(accountId) {
   db.prepare("DELETE FROM accounts WHERE id = ?").run(accountId);
 }
 
-function listSnapshots({ accountId, limit = 200 } = {}) {
+function listSnapshots({ accountId, month, limit = 200 } = {}) {
   return db
     .prepare(
       `
@@ -157,12 +157,14 @@ function listSnapshots({ accountId, limit = 200 } = {}) {
       FROM snapshots s
       JOIN accounts a ON a.id = s.account_id
       WHERE (@accountId IS NULL OR s.account_id = @accountId)
+        AND (@month IS NULL OR substr(s.snapshot_date, 1, 7) = @month)
       ORDER BY s.snapshot_date DESC, s.id DESC
       LIMIT @limit
     `
     )
     .all({
       accountId: accountId || null,
+      month: month || null,
       limit,
     })
     .map((row) => ({

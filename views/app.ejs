@@ -796,7 +796,10 @@
       <div class="col-12">
         <div class="panel-card">
           <div class="panel-header">
-            <span class="panel-title">最近余额记录</span>
+            <span class="panel-title">余额记录</span>
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              <input type="month" class="form-control" id="snapshotMonthFilter" value="<%= currentMonth %>" style="width:auto;height:32px;font-size:.78rem;padding:0 .5rem;border-radius:var(--pl-radius-xs);border:1px solid var(--pl-border);" />
+            </div>
           </div>
           <div class="panel-body panel-body-scroll">
             <table class="pl-table">
