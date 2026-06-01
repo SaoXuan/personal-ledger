@@ -297,7 +297,9 @@
       return;
     }
 
-    dom.accountsTbody.innerHTML = rows
+    const sorted = [...rows].sort((a, b) => (Number(b.latestBalance) || 0) - (Number(a.latestBalance) || 0));
+
+    dom.accountsTbody.innerHTML = sorted
       .map((row, idx) => {
         const hasLatest = row.latestBalance !== undefined && row.latestBalance !== "";
         const hasMonthly = row.monthlyReturnRate !== undefined && row.monthlyReturnRate !== "";
