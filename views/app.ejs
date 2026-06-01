@@ -274,6 +274,22 @@
     .hero-change-down { background: rgba(239,68,68,.2); color: #fca5a5; }
     .hero-change-flat { background: rgba(255,255,255,.1); color: rgba(255,255,255,.6); }
 
+    /* ═══════════════ Hero Sparkline ═══════════════ */
+    .hero-sparkline {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      pointer-events: none;
+      opacity: .4;
+      z-index: 0;
+    }
+    .hero-sparkline svg {
+      width: 100%;
+      height: 100%;
+    }
+
     /* ═══════════════ Metric Cards ═══════════════ */
     .metric-card {
       background: var(--pl-surface);
@@ -397,23 +413,6 @@
     .return-down { color: #dc2626; background: var(--pl-red-bg); border: 1px solid var(--pl-red-border); }
     .return-flat { color: var(--pl-text-3); background: var(--pl-border-light); border: 1px solid var(--pl-border); }
 
-    /* ═══════════════ Trend Bar ═══════════════ */
-    .trend-bar {
-      height: 5px;
-      border-radius: 999px;
-      background: var(--pl-border-light);
-      overflow: hidden;
-      margin-top: .3rem;
-    }
-    .trend-bar .bar-fill {
-      display: block;
-      height: 100%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, var(--pl-accent), #818cf8);
-      transition: width .4s ease;
-    }
-    .trend-cell { min-width: 180px; }
-
     /* ═══════════════ Account Chip ═══════════════ */
     .account-chip {
       display: flex;
@@ -444,6 +443,71 @@
       background: var(--pl-border-light);
       color: var(--pl-text-2);
     }
+
+    /* ═══════════════ Sparkline ═══════════════ */
+    .sparkline-cell {
+      cursor: pointer;
+      text-align: center;
+      transition: opacity var(--pl-transition);
+    }
+    .sparkline-cell:hover { opacity: .7; }
+    .sparkline-svg { display: inline-block; vertical-align: middle; }
+    .sparkline-empty {
+      font-size: .68rem;
+      color: var(--pl-text-3);
+      white-space: nowrap;
+      cursor: default;
+    }
+
+    /* ═══════════════ Chart Modal ═══════════════ */
+    .chart-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 1050;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn .15s ease;
+    }
+    .chart-modal-content {
+      background: var(--pl-surface);
+      border-radius: var(--pl-radius);
+      width: 92%;
+      max-width: 680px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+      animation: fadeInUp .2s ease;
+      overflow: hidden;
+    }
+    .chart-modal-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--pl-border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .chart-modal-title { font-size: .95rem; font-weight: 600; }
+    .chart-modal-meta {
+      font-size: .72rem;
+      color: var(--pl-text-3);
+      padding: .5rem 1.25rem 0;
+    }
+    .chart-modal-body { padding: 1rem 1.25rem 1.25rem; }
+    .chart-modal-close {
+      background: none;
+      border: 1px solid var(--pl-border);
+      border-radius: var(--pl-radius-xs);
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--pl-text-2);
+      font-size: .75rem;
+      transition: all var(--pl-transition);
+    }
+    .chart-modal-close:hover { border-color: var(--pl-accent); color: var(--pl-accent); }
 
     /* ═══════════════ Buttons ═══════════════ */
     .btn-action {
@@ -514,6 +578,10 @@
     .modal-footer { border-top: 1px solid var(--pl-border-light); padding: .75rem 1.25rem; }
 
     /* ═══════════════ Animations ═══════════════ */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
     @keyframes fadeInDown {
       from { opacity: 0; transform: translateY(-8px); }
       to { opacity: 1; transform: translateY(0); }
@@ -623,6 +691,7 @@
             <span class="hero-meta"><i class="bi bi-calendar3"></i><span id="cardLastDate">-</span></span>
             <span class="hero-meta"><i class="bi bi-currency-yen"></i>RMB</span>
           </div>
+          <div id="heroSparkline" class="hero-sparkline"></div>
         </div>
       </div>
       <div class="col-12 col-lg-7">
@@ -677,28 +746,9 @@
       </div>
     </div>
 
-    <!-- ═══ Row 2: Trend (col-7) + Account Performance (col-5) ═══ -->
+    <!-- ═══ Row 2: Account Performance (full width, with sparkline column) ═══ -->
     <div class="row g-3 mb-3">
-      <div class="col-12 col-lg-7">
-        <div class="panel-card">
-          <div class="panel-header">
-            <span class="panel-title">月度资产趋势</span>
-          </div>
-          <div class="panel-body">
-            <table class="pl-table">
-              <thead>
-                <tr>
-                  <th>月份</th>
-                  <th>总资产（RMB）</th>
-                  <th class="text-end">环比变化</th>
-                </tr>
-              </thead>
-              <tbody id="trendTbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div class="col-12 col-lg-5">
+      <div class="col-12">
         <div class="panel-card">
           <div class="panel-header">
             <span class="panel-title">账户表现</span>
@@ -712,6 +762,7 @@
                 <tr>
                   <th>账户</th>
                   <th class="text-end">余额 / 变动</th>
+                  <th style="text-align:center;">趋势</th>
                   <th class="text-end">收益率</th>
                   <th class="text-end">操作</th>
                 </tr>
@@ -771,7 +822,22 @@
     </div>
   </div>
 
+  <!-- ═══ Chart Modal ═══ -->
+  <div id="chartModalBackdrop" class="chart-modal-backdrop" style="display:none;">
+    <div class="chart-modal-content">
+      <div class="chart-modal-header">
+        <span class="chart-modal-title" id="chartModalTitle"></span>
+        <button class="chart-modal-close" id="chartModalClose"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="chart-modal-meta" id="chartModalMeta"></div>
+      <div class="chart-modal-body">
+        <canvas id="chartCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

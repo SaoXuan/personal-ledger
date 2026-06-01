@@ -7,14 +7,16 @@
     accountPerformance: [],
     recentSnapshots: [],
     trend: [],
+    snapshotsByAccount: {},
   };
+
+  let chartInstance = null;
 
   const dom = {
     statusText: document.getElementById("statusText"),
     refreshBtn: document.getElementById("refreshBtn"),
     quickSnapshotForm: document.getElementById("quickSnapshotForm"),
     quickAccountSelect: document.getElementById("quickAccountSelect"),
-    trendTbody: document.getElementById("trendTbody"),
     accountsTbody: document.getElementById("accountsTbody"),
     snapshotsTbody: document.getElementById("snapshotsTbody"),
     openAccountModalBtn: document.getElementById("openAccountModalBtn"),
@@ -28,7 +30,13 @@
     cardTotalReturn: document.getElementById("cardTotalReturn"),
     cardTotalChangeRange: document.getElementById("cardTotalChangeRange"),
     heroChangeBadge: document.getElementById("heroChangeBadge"),
+    heroSparkline: document.getElementById("heroSparkline"),
     toastContainer: document.getElementById("toastContainer"),
+    chartModalBackdrop: document.getElementById("chartModalBackdrop"),
+    chartModalTitle: document.getElementById("chartModalTitle"),
+    chartModalMeta: document.getElementById("chartModalMeta"),
+    chartModalClose: document.getElementById("chartModalClose"),
+    chartCanvas: document.getElementById("chartCanvas"),
   };
 
   const accountModalEl = document.getElementById("accountModal");
@@ -120,6 +128,76 @@
     return data;
   }
 
+  /* ═══════════════ SVG Sparkline ═══════════════ */
+  function createSparklineSVG(values, options = {}) {
+    const {
+      width = 80,
+      height = 28,
+      strokeWidth = 1.5,
+      color = null,
+      padding = 2,
+    } = options;
+
+    if (!values || values.length < 2) return null;
+
+    const nums = values.map(Number);
+    const autoColor =
+      nums[nums.length - 1] >= nums[0] ? "var(--pl-green)" : "var(--pl-red)";
+    const strokeColor = color || autoColor;
+
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    const range = max - min || 1;
+
+    const points = nums
+      .map((v, i) => {
+        const x = padding + (i / (nums.length - 1)) * (width - padding * 2);
+        const y = padding + (1 - (v - min) / range) * (height - padding * 2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+
+    return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="sparkline-svg"><polyline points="${points}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
+
+  /* ═══════════════ Hero Sparkline ═══════════════ */
+  function renderHeroSparkline() {
+    if (!dom.heroSparkline) return;
+    if (!state.trend || state.trend.length < 2) {
+      dom.heroSparkline.innerHTML = "";
+      return;
+    }
+
+    // trend is newest-first; reverse for left-to-right chronological
+    const values = [...state.trend].reverse().map((t) => Number(t.total) || 0);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+    const w = 400;
+    const h = 60;
+
+    const pointsArr = values.map((v, i) => {
+      const x = (i / (values.length - 1)) * w;
+      const y = (1 - (v - min) / range) * h;
+      return [x, y];
+    });
+
+    const linePoints = pointsArr
+      .map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`)
+      .join(" ");
+
+    const pathD =
+      `M0,${h} ` +
+      pointsArr.map(([x, y]) => `L${x.toFixed(1)},${y.toFixed(1)}`).join(" ") +
+      ` L${w},${h} Z`;
+
+    dom.heroSparkline.innerHTML =
+      `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">` +
+      `<path d="${pathD}" fill="rgba(99,102,241,.12)"/>` +
+      `<polyline points="${linePoints}" fill="none" stroke="rgba(99,102,241,.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>` +
+      `</svg>`;
+  }
+
   /* ═══════════════ Render: Cards ═══════════════ */
   function renderCards() {
     dom.cardTotalRmb.textContent = formatNumber(state.summaryRmb);
@@ -186,51 +264,12 @@
     dom.quickAccountSelect.innerHTML = options.join("");
   }
 
-  /* ═══════════════ Render: Trend Table ═══════════════ */
-  function renderTrendTable() {
-    if (!state.trend.length) {
-      dom.trendTbody.innerHTML = `<tr><td colspan="3" class="text-muted-3" style="padding:1rem;">暂无数据</td></tr>`;
-      return;
-    }
-
-    const maxTotal = Math.max(...state.trend.map((row) => Number(row.total) || 0), 1);
-
-    dom.trendTbody.innerHTML = state.trend
-      .map((row, idx) => {
-        const total = Number(row.total) || 0;
-        const width = Math.max(6, Math.round((total / maxTotal) * 100));
-
-        /* Month-over-month change */
-        let changeHtml = '<span class="text-muted-3">-</span>';
-        if (idx < state.trend.length - 1) {
-          const prevTotal = Number(state.trend[idx + 1].total) || 0;
-          if (prevTotal > 0) {
-            const diff = total - prevTotal;
-            const dir = diff > 0 ? "up" : diff < 0 ? "down" : "flat";
-            changeHtml = `<span class="return-badge ${directionClass(dir)}"><i class="bi ${directionIcon(dir)}"></i>${formatSignedNumber(diff)}</span>`;
-          }
-        }
-
-        const delay = idx * 30;
-        return `
-      <tr style="animation-delay:${delay}ms">
-        <td><span class="month-pill">${escapeHtml(row.bucket)}</span></td>
-        <td class="trend-cell">
-          <span class="fw-600 text-tabular">${formatNumber(row.total)}</span>
-          <div class="trend-bar"><span class="bar-fill" style="width:${width}%"></span></div>
-        </td>
-        <td class="text-end">${changeHtml}</td>
-      </tr>`;
-      })
-      .join("");
-  }
-
-  /* ═══════════════ Render: Accounts Table (compact 4-col) ═══════════════ */
+  /* ═══════════════ Render: Accounts Table (full width, with sparkline) ═══════════════ */
   function renderAccountsTable() {
     const rows = state.accountPerformance.length ? state.accountPerformance : state.accounts;
     if (!rows.length) {
       dom.accountsTbody.innerHTML =
-        '<tr><td colspan="4" class="text-muted-3" style="padding:1rem;">还没有账户，先新增一个。</td></tr>';
+        '<tr><td colspan="5" class="text-muted-3" style="padding:1rem;">还没有账户，先新增一个。</td></tr>';
       return;
     }
 
@@ -258,6 +297,18 @@
           : "";
 
         const recordInfo = `${Number(row.snapshotCount || 0)} 条`;
+
+        /* Sparkline */
+        const accountSnapshots = state.snapshotsByAccount[row.id] || [];
+        let sparklineTd;
+        if (accountSnapshots.length >= 2) {
+          const vals = accountSnapshots.map((s) => Number(s.balance));
+          const svg = createSparklineSVG(vals);
+          sparklineTd = `<td class="sparkline-cell" data-action="show-chart" data-account-id="${row.id}" data-account-name="${escapeHtml(row.name)}">${svg || ""}</td>`;
+        } else {
+          sparklineTd = `<td class="sparkline-cell"><span class="sparkline-empty">数据不足</span></td>`;
+        }
+
         const delay = idx * 30;
 
         return `
@@ -275,6 +326,7 @@
           <div class="fw-600 text-tabular" style="font-size:.85rem;">${balanceHtml}</div>
           ${changeHtml}
         </td>
+        ${sparklineTd}
         <td class="text-end">
           <div style="margin-bottom:.2rem;">${monthlyBadge}</div>
           ${cumulativeBadge ? `<div>${cumulativeBadge}</div>` : ""}
@@ -325,6 +377,118 @@
       .join("");
   }
 
+  /* ═══════════════ Snapshot Data for Sparklines ═══════════════ */
+  async function loadSnapshotData() {
+    try {
+      const data = await apiGet("/api/snapshots");
+      const snapshots = data.snapshots || [];
+      const grouped = {};
+      for (const s of snapshots) {
+        const aid = s.accountId;
+        if (!aid) continue;
+        if (!grouped[aid]) grouped[aid] = [];
+        grouped[aid].push(s);
+      }
+      // Sort each group by snapshotMonth ascending (oldest → newest)
+      for (const aid of Object.keys(grouped)) {
+        grouped[aid].sort((a, b) => a.snapshotMonth.localeCompare(b.snapshotMonth));
+      }
+      state.snapshotsByAccount = grouped;
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load sparkline data:", e);
+    }
+  }
+
+  /* ═══════════════ Chart Modal ═══════════════ */
+  function openChartModal(accountId, accountName) {
+    const snapshots = state.snapshotsByAccount[accountId] || [];
+    if (snapshots.length < 2) return;
+
+    dom.chartModalTitle.textContent = accountName;
+    dom.chartModalMeta.textContent =
+      snapshots[0].snapshotMonth +
+      " ~ " +
+      snapshots[snapshots.length - 1].snapshotMonth +
+      " \u00b7 " +
+      snapshots.length +
+      " 条记录";
+    dom.chartModalBackdrop.style.display = "flex";
+
+    if (chartInstance) {
+      chartInstance.destroy();
+      chartInstance = null;
+    }
+
+    const labels = snapshots.map((s) => s.snapshotMonth);
+    const values = snapshots.map((s) => Number(s.balance));
+
+    chartInstance = new Chart(dom.chartCanvas, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: accountName,
+            data: values,
+            borderColor: "#6366f1",
+            backgroundColor: "rgba(99,102,241,.1)",
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            borderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                return (
+                  "\u00a5" +
+                  Number(ctx.parsed.y).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })
+                );
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { size: 11 } },
+          },
+          y: {
+            ticks: {
+              font: { size: 11 },
+              callback: function (v) {
+                if (Math.abs(v) >= 1000) {
+                  return "\u00a5" + (v / 1000).toFixed(0) + "k";
+                }
+                return "\u00a5" + v.toFixed(0);
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  function closeChartModal() {
+    dom.chartModalBackdrop.style.display = "none";
+    if (chartInstance) {
+      chartInstance.destroy();
+      chartInstance = null;
+    }
+  }
+
   /* ═══════════════ Data Loading ═══════════════ */
   async function loadBootstrap(silent = false) {
     const data = await apiGet("/api/bootstrap");
@@ -337,9 +501,11 @@
     state.recentSnapshots = data.recentSnapshots || [];
     state.trend = data.trend || [];
 
+    await loadSnapshotData();
+
     renderCards();
     renderAccountSelect();
-    renderTrendTable();
+    renderHeroSparkline();
     renderAccountsTable();
     renderSnapshotsTable();
 
@@ -421,6 +587,16 @@
     });
 
     dom.accountsTbody.addEventListener("click", (event) => {
+      /* Sparkline click → open chart modal */
+      const sparklineCell = event.target.closest("td[data-action='show-chart']");
+      if (sparklineCell) {
+        const accountId = Number(sparklineCell.dataset.accountId);
+        const accountName = sparklineCell.dataset.accountName;
+        if (accountId) openChartModal(accountId, accountName);
+        return;
+      }
+
+      /* Button actions */
       const btn = event.target.closest("button[data-action]");
       if (!btn) return;
       const action = btn.dataset.action;
@@ -450,16 +626,23 @@
       if (!id) return;
       removeSnapshot(id).catch((error) => showToast(error.message, "error"));
     });
+
+    /* Chart modal close handlers */
+    dom.chartModalClose.addEventListener("click", closeChartModal);
+    dom.chartModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === dom.chartModalBackdrop) closeChartModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && dom.chartModalBackdrop.style.display !== "none") {
+        closeChartModal();
+      }
+    });
   }
 
   /* ═══════════════ Start ═══════════════ */
   async function start() {
     bindEvents();
     await loadBootstrap(true);
-    dom.statusText.textContent = "数据每 15 秒自动刷新";
-    setInterval(() => {
-      loadBootstrap(true).catch((error) => showToast(error.message, "error"));
-    }, 15000);
   }
 
   start().catch((error) => {
